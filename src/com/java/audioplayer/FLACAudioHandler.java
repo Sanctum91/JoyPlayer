@@ -696,7 +696,15 @@ public class FLACAudioHandler {
 										isPlaying = !isPlaying;
 									}
 									playOrNot = true;
-									new requestHandler("playOrNot");
+									synchronized (lock) {
+										new requestHandler("playOrNot");
+										try {
+											Thread.sleep(300);
+										} catch (InterruptedException e1) {
+											e1.printStackTrace();
+										}
+										lock.notify();
+									}
 									break;
 								} else if (reply == JOptionPane.NO_OPTION) {
 									Thread.sleep(100);
@@ -741,14 +749,30 @@ public class FLACAudioHandler {
 						isPlaying = !isPlaying;
 					}
 					playOrNot = true;
-					new requestHandler("playOrNot");
+					synchronized (lock) {
+						new requestHandler("playOrNot");
+						try {
+							Thread.sleep(300);
+						} catch (InterruptedException e1) {
+							e1.printStackTrace();
+						}
+						lock.notify();
+					}
 				} else {
 					if (askForAChange == true)
 						playOrNot = true;
 					else {
 						playOrNot = !isPlaying;
 					}
-					new requestHandler("playOrNot");
+					synchronized (lock) {
+						new requestHandler("playOrNot");
+						try {
+							Thread.sleep(300);
+						} catch (InterruptedException e1) {
+							e1.printStackTrace();
+						}
+						lock.notify();
+					}
 				}
 			}
 		}
@@ -1283,14 +1307,30 @@ public class FLACAudioHandler {
 						isPlaying = !isPlaying;
 					}
 					playOrNot = true;
-					new requestHandler("playOrNot");
+					synchronized (lock) {
+						new requestHandler("playOrNot");
+						try {
+							Thread.sleep(300);
+						} catch (InterruptedException e1) {
+							e1.printStackTrace();
+						}
+						lock.notify();
+					}
 				} else {
 					if (askForAChange == true)
 						playOrNot = true;
 					else {
 						playOrNot = !isPlaying;
 					}
-					new requestHandler("playOrNot");
+					synchronized (lock) {
+						new requestHandler("playOrNot");
+						try {
+							Thread.sleep(300);
+						} catch (InterruptedException e1) {
+							e1.printStackTrace();
+						}
+						lock.notify();
+					}
 				}
 			} else if (e.getKeyCode() == 27 && e.getModifiersEx() == 0) {
 				if (getState() != JFrame.ICONIFIED)

@@ -26,8 +26,10 @@ public class FLACFileExplorer {
 	private static final String lrcExt = ".lrc";
 	private static JFileChooser fileChooser;
 	private static Object lock = new Object();
+	private static int songIdx = 0;
 
 	static {
+		songIdx = 0;
 		specifiedPath = null;
 		fileChooser = new JFileChooser();
 		fileChooser.setDialogTitle("Please choose a FLAC directory");
@@ -309,22 +311,15 @@ public class FLACFileExplorer {
 		if (specifiedPath == null) {
 			return null;
 		}
-		songToPlay = shuffle(songList);
-		if (!songsHavePicked.contains(songToPlay))
-			songsHavePicked.add(songToPlay);
-		else {
-			// Ensure no repeated audio files would be played.
-			int count = 0;
-			while (songsHavePicked.contains(songToPlay) && count <= songsHavePicked.size()) {
+		if (songIdx < songList.size()) {
+			do {
 				songToPlay = shuffle(songList);
-				count++;
-			}
+			} while (songsHavePicked.contains(songToPlay));
 			if (!songsHavePicked.contains(songToPlay))
-				songsHavePicked.add(songToPlay);
-			else
-				songToPlay = "";
+				songIdx++;
+		} else {
+			return "";
 		}
 		return songToPlay;
 	}
-
 }
