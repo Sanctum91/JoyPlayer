@@ -1,5 +1,6 @@
 package com.java.audioplayer;
 
+import java.awt.Button;
 import java.awt.Color;
 import java.awt.Component;
 import java.awt.Container;
@@ -7,12 +8,18 @@ import java.awt.Dimension;
 import java.awt.Font;
 import java.awt.FontMetrics;
 import java.awt.Frame;
+import java.awt.Graphics;
 import java.awt.GraphicsDevice;
 import java.awt.GraphicsEnvironment;
+import java.awt.Insets;
+import java.awt.event.ActionListener;
+import java.awt.event.ItemListener;
 import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
+import java.awt.geom.Dimension2D;
+import java.awt.geom.Ellipse2D;
 import java.io.BufferedInputStream;
 import java.io.EOFException;
 import java.io.File;
@@ -29,7 +36,10 @@ import javax.sound.sampled.AudioSystem;
 import javax.sound.sampled.DataLine;
 import javax.sound.sampled.LineUnavailableException;
 import javax.sound.sampled.SourceDataLine;
+import javax.swing.BorderFactory;
 import javax.swing.Box;
+import javax.swing.ButtonGroup;
+import javax.swing.ButtonModel;
 import javax.swing.ImageIcon;
 import javax.swing.JButton;
 import javax.swing.JFrame;
@@ -38,6 +48,9 @@ import javax.swing.JOptionPane;
 import javax.swing.JSlider;
 import javax.swing.SwingConstants;
 import javax.swing.SwingUtilities;
+import javax.swing.border.Border;
+import javax.swing.event.ChangeListener;
+import javax.swing.plaf.DimensionUIResource;
 import javax.swing.plaf.basic.BasicSliderUI;
 import javax.swing.plaf.metal.MetalSliderUI;
 
@@ -483,24 +496,24 @@ public class FLACAudioHandler {
 					"panda_128Pixels.png"));
 			pandaButton = new JButton();
 			preButton = new JButton();
-			preButton.setIcon(preIcon);
 			playButton = new JButton();
-			playButton.setIcon(startIcon);
 			nextButton = new JButton();
-			nextButton.setIcon(nextIcon);
 			stopButton = new JButton();
-			stopButton.setIcon(stopIcon);
-			pandaButton.setIcon(pandaImage);
 			pandaButton.setPreferredSize(new Dimension(128, 128));
 			playButton.setPreferredSize(new Dimension(128, 128));
+			stopButton.setPreferredSize(new Dimension(128, 128));
+			preButton.setPreferredSize(new Dimension(128, 128));
+			nextButton.setPreferredSize(new Dimension(128, 128));
+			preButton.setIcon(preIcon);
+			playButton.setIcon(startIcon);
+			nextButton.setIcon(nextIcon);
+			stopButton.setIcon(stopIcon);
+			pandaButton.setIcon(pandaImage);
 			// to hinder the extra area excluded in the icon from being
 			// highlighted when doing mouse click.
 			playButton.setContentAreaFilled(false);
-			stopButton.setPreferredSize(new Dimension(128, 128));
 			stopButton.setContentAreaFilled(false);
-			preButton.setPreferredSize(new Dimension(128, 128));
 			preButton.setContentAreaFilled(false);
-			nextButton.setPreferredSize(new Dimension(128, 128));
 			nextButton.setContentAreaFilled(false);
 			// pandaButton.setContentAreaFilled(true);
 			timeLabel = new JLabel();
@@ -734,44 +747,88 @@ public class FLACAudioHandler {
 					}
 				}
 			} else if (e.getSource().equals(this.nextButton)) {
-				playNextSong = true;
-				new requestHandler("playNextSong");
-			} else if (e.getSource().equals(this.preButton)) {
-				playPreviousSong = true;
-				new requestHandler("playPreviousSong");
-			} else if (e.getSource().equals(this.stopButton)) {
-				stopPlaying = true;
-				new requestHandler("stopPlaying");
-			} else if (e.getSource().equals(playButton)) {
-				if (handler == null) {
-					askForAChange = true;
-					if (isPlaying) {
-						isPlaying = !isPlaying;
-					}
-					playOrNot = true;
-					synchronized (lock) {
-						new requestHandler("playOrNot");
-						try {
-							Thread.sleep(300);
-						} catch (InterruptedException e1) {
-							e1.printStackTrace();
-						}
-						lock.notify();
-					}
+				if (Math.pow(e.getX() - nextButton.getHeight() / 2, 2)
+						+ Math.pow(e.getY() - nextButton.getHeight() / 2, 2) > Math
+							.pow(nextButton.getHeight() / 2, 2)) {
+					return;
 				} else {
-					if (askForAChange == true)
-						playOrNot = true;
-					else {
-						playOrNot = !isPlaying;
+					try {
+						Thread.sleep(50);
+					} catch (InterruptedException e1) {
+						e1.printStackTrace();
 					}
-					synchronized (lock) {
-						new requestHandler("playOrNot");
-						try {
-							Thread.sleep(300);
-						} catch (InterruptedException e1) {
-							e1.printStackTrace();
+					playNextSong = true;
+					new requestHandler("playNextSong");
+				}
+			} else if (e.getSource().equals(this.preButton)) {
+				if (Math.pow(e.getX() - preButton.getHeight() / 2, 2)
+						+ Math.pow(e.getY() - preButton.getHeight() / 2, 2) > Math
+							.pow(preButton.getHeight() / 2, 2)) {
+					return;
+				} else {
+					try {
+						Thread.sleep(50);
+					} catch (InterruptedException e1) {
+						e1.printStackTrace();
+					}
+					playPreviousSong = true;
+					new requestHandler("playPreviousSong");
+				}
+			} else if (e.getSource().equals(this.stopButton)) {
+				if (Math.pow(e.getX() - stopButton.getHeight() / 2, 2)
+						+ Math.pow(e.getY() - stopButton.getHeight() / 2, 2) > Math
+							.pow(stopButton.getHeight() / 2, 2)) {
+					return;
+				} else {
+					try {
+						Thread.sleep(50);
+					} catch (InterruptedException e1) {
+						e1.printStackTrace();
+					}
+					stopPlaying = true;
+					new requestHandler("stopPlaying");
+				}
+			} else if (e.getSource().equals(playButton)) {
+				if (Math.pow(e.getX() - playButton.getHeight() / 2, 2)
+						+ Math.pow(e.getY() - playButton.getHeight() / 2, 2) > Math
+							.pow(playButton.getHeight() / 2, 2)) {
+					return;
+				} else {
+					try {
+						Thread.sleep(50);
+					} catch (InterruptedException e1) {
+						e1.printStackTrace();
+					}
+					if (handler == null) {
+						askForAChange = true;
+						if (isPlaying) {
+							isPlaying = !isPlaying;
 						}
-						lock.notify();
+						playOrNot = true;
+						synchronized (lock) {
+							new requestHandler("playOrNot");
+							try {
+								Thread.sleep(300);
+							} catch (InterruptedException e1) {
+								e1.printStackTrace();
+							}
+							lock.notify();
+						}
+					} else {
+						if (askForAChange == true)
+							playOrNot = true;
+						else {
+							playOrNot = !isPlaying;
+						}
+						synchronized (lock) {
+							new requestHandler("playOrNot");
+							try {
+								Thread.sleep(300);
+							} catch (InterruptedException e1) {
+								e1.printStackTrace();
+							}
+							lock.notify();
+						}
 					}
 				}
 			}
@@ -2285,8 +2342,8 @@ public class FLACAudioHandler {
 	public class BadFileFormatException extends Exception {
 
 		/**
-	 * 
-	 */
+		 * 
+		 */
 		private static final long serialVersionUID = -6038660784354160702L;
 
 		public BadFileFormatException(String message) {
