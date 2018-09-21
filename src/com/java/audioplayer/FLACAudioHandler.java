@@ -1,6 +1,5 @@
 package com.java.audioplayer;
 
-import java.awt.Button;
 import java.awt.Color;
 import java.awt.Component;
 import java.awt.Container;
@@ -8,18 +7,12 @@ import java.awt.Dimension;
 import java.awt.Font;
 import java.awt.FontMetrics;
 import java.awt.Frame;
-import java.awt.Graphics;
 import java.awt.GraphicsDevice;
 import java.awt.GraphicsEnvironment;
-import java.awt.Insets;
-import java.awt.event.ActionListener;
-import java.awt.event.ItemListener;
 import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
-import java.awt.geom.Dimension2D;
-import java.awt.geom.Ellipse2D;
 import java.io.BufferedInputStream;
 import java.io.EOFException;
 import java.io.File;
@@ -36,10 +29,7 @@ import javax.sound.sampled.AudioSystem;
 import javax.sound.sampled.DataLine;
 import javax.sound.sampled.LineUnavailableException;
 import javax.sound.sampled.SourceDataLine;
-import javax.swing.BorderFactory;
 import javax.swing.Box;
-import javax.swing.ButtonGroup;
-import javax.swing.ButtonModel;
 import javax.swing.ImageIcon;
 import javax.swing.JButton;
 import javax.swing.JFrame;
@@ -48,9 +38,6 @@ import javax.swing.JOptionPane;
 import javax.swing.JSlider;
 import javax.swing.SwingConstants;
 import javax.swing.SwingUtilities;
-import javax.swing.border.Border;
-import javax.swing.event.ChangeListener;
-import javax.swing.plaf.DimensionUIResource;
 import javax.swing.plaf.basic.BasicSliderUI;
 import javax.swing.plaf.metal.MetalSliderUI;
 
@@ -1401,7 +1388,8 @@ public class FLACAudioHandler {
 		}
 
 		/**
-		 * use a time frame to show instantaneous time frame in seconds.
+		 * 1. To show instantaneous time frame in seconds.
+		 * 2. To show instantaneous lyric corresponding to current time frame.
 		 * 
 		 * @author JoySanctuary
 		 *
