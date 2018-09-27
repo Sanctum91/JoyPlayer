@@ -1428,15 +1428,11 @@ public class FLACAudioHandler {
 					lyricsLabelMid.setForeground(new Color(0x003366));
 					lyricsLabelNext.setForeground(new Color(0x003366));
 					lyricDict = FLACFileExplorer.lrcParser(lrcPathStr);
-					float[] frameKeys = new float[lyricDict.keySet().size()];
-					framePoints = new ArrayList<Float>();
-					int counter = 0;
-					for (float f : lyricDict.keySet()) {
-						frameKeys[counter] = f;
-						counter++;
-					}
+					Float[] frameKeys = new Float[lyricDict.keySet().size()];
+					lyricDict.keySet().toArray(frameKeys);
 					Arrays.sort(frameKeys);
-					for (float f : frameKeys)
+					framePoints = new ArrayList<Float>();
+					for (Float f : frameKeys)
 						framePoints.add(f);
 					// mapped time frame to corresponding lyrics.
 					framePoints.trimToSize();
