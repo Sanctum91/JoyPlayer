@@ -1216,6 +1216,10 @@ public class FLACAudioHandler {
 									- Math.round(1e6 * samplePos
 											* sampleRateReciprocal);
 							request = -0.01;
+							if (!playButton.getIcon().equals(pauseIcon)) {
+								Thread.sleep(250);
+								playButton.setIcon(pauseIcon);
+							}
 						} else {
 							if (input == null)
 								return;
@@ -1388,8 +1392,8 @@ public class FLACAudioHandler {
 		}
 
 		/**
-		 * 1. To show instantaneous time frame in seconds.
-		 * 2. To show instantaneous lyric corresponding to current time frame.
+		 * 1. To show instantaneous time frame in seconds. 2. To show
+		 * instantaneous lyric corresponding to current time frame.
 		 * 
 		 * @author JoySanctuary
 		 *
