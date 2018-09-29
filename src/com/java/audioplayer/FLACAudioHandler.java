@@ -23,6 +23,8 @@ import java.io.RandomAccessFile;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 import javax.sound.sampled.AudioFormat;
 import javax.sound.sampled.AudioSystem;
@@ -50,6 +52,12 @@ import javax.swing.plaf.metal.MetalSliderUI;
  *
  */
 public class FLACAudioHandler {
+	private static final Logger logger = Logger
+			.getLogger("com.java.audioplayer");
+	private static final int valueOfCharf = 0x66;
+	private static final int valueOfCharL = 0x4C;
+	private static final long streamMarker = 0x664C6143L;
+	private static final int bitsofOneByte = 8;
 	private static boolean isReady = false;
 	private static Stream input;
 	private static FLACAudioHandler handler = null;
@@ -326,8 +334,29 @@ public class FLACAudioHandler {
 		 * <32 bits> "fLaC", the FLAC stream marker in ASCII, meaning byte 0 of
 		 * the stream is 0x66, followed by 0x4C 0x61 0x43
 		 */
-		if (input.readBit(32) != 0x664C6143)
+		try {
+			long marker = (input.readByte() << bitsofOneByte)
+					| input.readByte();
+			if (marker != ((valueOfCharf << bitsofOneByte) | valueOfCharL)) {
+				while (marker != valueOfCharf) {
+					marker = input.readByte();
+				}
+				marker = (marker << bitsofOneByte) | input.readByte();
+			}
+			for (int i = 0; i < 2; i++) {
+				marker = (marker << bitsofOneByte) | input.readByte();
+			}
+			while (marker != streamMarker) {
+				marker = ((marker & 0xFFFFFF) << bitsofOneByte)
+						| input.readByte();
+			}
+		} catch (EOFException e) {
+			filesNotBeenInitialized = true;
+			JOptionPane.showMessageDialog(generator,
+					"Cannot find valid stream marker!", "Error Occurred",
+					JOptionPane.ERROR_MESSAGE);
 			throw new BadFileFormatException("Invalid stream marker!");
+		}
 		/**
 		 * METADATA_BLOCK_HEADER handler (There could be more than one metadata
 		 * blocks, and all the block headers shall the same size)
@@ -454,9 +483,11 @@ public class FLACAudioHandler {
 		private FontMetrics fontMetrics;
 		private Font monospace;
 		private String alignment;
+		private boolean stillHandlingLyrics;
 
 		private GUIGenerator() {
 			super();
+			stillHandlingLyrics = true;
 			this.setResizable(false);
 			askForAChange = false;
 			playNextSong = false;
@@ -732,6 +763,7 @@ public class FLACAudioHandler {
 							request = temp;
 						lock.notify();
 					}
+					logger.log(Level.INFO, "Jumping to the selected position.");
 				}
 			} else if (e.getSource().equals(this.nextButton)) {
 				if (Math.pow(e.getX() - nextButton.getHeight() / 2, 2)
@@ -867,17 +899,18 @@ public class FLACAudioHandler {
 
 		public class requestHandler {
 			public requestHandler(String option) {
-				switch (option) {
-				// handling play next song
-				case "playNextSong":
-					while (wayPlaying || waySearching) {
-						;
-					}
-					askForAChange = true;
-					if (stopPlaying) {
-						stopPlaying = !stopPlaying;
-					}
-					try {
+				try {
+					switch (option) {
+					// handling play next song
+					case "playNextSong":
+						logger.log(Level.INFO, "Start playing next audio.");
+						while (wayPlaying || waySearching) {
+							Thread.sleep(1);
+						}
+						askForAChange = true;
+						if (stopPlaying) {
+							stopPlaying = !stopPlaying;
+						}
 						closeFile();
 						Thread.sleep(200);
 						lyricsLabelPre
@@ -920,36 +953,33 @@ public class FLACAudioHandler {
 							songsHavePlayed.add(songToPlay);
 						}
 						Thread.sleep(50);
-					} catch (IOException | BadFileFormatException
-							| InterruptedException e1) {
-						e1.printStackTrace();
-					}
-					if (isPlaying) {
-						isPlaying = !isPlaying;
-					}
-					if (!isPlaying) {
-						isPlaying = !isPlaying;
-						playButton.setIcon(pauseIcon);
-						Thread audioThread = new Thread(new AudioParser());
-						audioThread.setDaemon(true);
-						audioThread.start();
-						Thread timeThread = new Thread(new LyricsParser());
-						timeThread.setDaemon(true);
-						timeThread.start();
-					}
-					break;
-				// handling play previous song
-				case "playPreviousSong":
-					if (stopPlaying) {
-						stopPlaying = !stopPlaying;
-					}
-					while (wayPlaying || waySearching) {
-						if (playPreviousSong) {
-							playPreviousSong = !playPreviousSong;
+						if (isPlaying) {
+							isPlaying = !isPlaying;
 						}
-					}
-					askForAChange = true;
-					try {
+						if (!isPlaying) {
+							isPlaying = !isPlaying;
+							playButton.setIcon(pauseIcon);
+							stillHandlingLyrics = true;
+							Thread audioThread = new Thread(new AudioParser());
+							audioThread.setDaemon(true);
+							audioThread.start();
+							Thread timeThread = new Thread(new LyricsParser());
+							timeThread.setDaemon(true);
+							timeThread.start();
+						}
+						break;
+					// handling play previous song
+					case "playPreviousSong":
+						logger.log(Level.INFO, "Start playing previous audio.");
+						if (stopPlaying) {
+							stopPlaying = !stopPlaying;
+						}
+						while (wayPlaying || waySearching) {
+							if (playPreviousSong) {
+								playPreviousSong = !playPreviousSong;
+							}
+						}
+						askForAChange = true;
 						closeFile();
 						Thread.sleep(200);
 						lyricsLabelPre
@@ -965,7 +995,8 @@ public class FLACAudioHandler {
 						if (playPreviousSong) {
 							playPreviousSong = !playPreviousSong;
 						}
-						// When the previous song is not the last played song.
+						// When the previous song is not the last played
+						// song.
 						if (songsHavePlayed.indexOf(lastPlayed) > 0) {
 							songToPlay = songsHavePlayed.get(songsHavePlayed
 									.indexOf(lastPlayed) - 1);
@@ -985,113 +1016,115 @@ public class FLACAudioHandler {
 							return;
 						}
 						Thread.sleep(50);
-					} catch (IOException | BadFileFormatException
-							| InterruptedException e1) {
-						e1.printStackTrace();
-					}
-					if (isPlaying) {
-						isPlaying = !isPlaying;
-					}
-					if (!isPlaying) {
-						isPlaying = !isPlaying;
-						playButton.setIcon(pauseIcon);
-						Thread audioThread = new Thread(new AudioParser());
-						audioThread.setDaemon(true);
-						audioThread.start();
-						Thread timeThread = new Thread(new LyricsParser());
-						timeThread.setDaemon(true);
-						timeThread.start();
-					}
-					break;
-				case "playOrNot":
-					if (stopPlaying) {
-						stopPlaying = !stopPlaying;
-					}
-					while (wayPlaying || waySearching) {
-						;
-					}
-					if (handler == null) {
-						askForAChange = true;
-						lyricsLabelPre
-								.setText(quotes[(int) (quotes.length * Math
-										.random())]);
-						lyricsLabelMid
-								.setText(quotes[(int) (quotes.length * Math
-										.random())]);
-						lyricsLabelNext
-								.setText(quotes[(int) (quotes.length * Math
-										.random())]);
-						timeLabel.setText(alignment + timeLabelInit);
-						try {
+						if (isPlaying) {
+							isPlaying = !isPlaying;
+						}
+						if (!isPlaying) {
+							isPlaying = !isPlaying;
+							playButton.setIcon(pauseIcon);
+							stillHandlingLyrics = true;
+							Thread audioThread = new Thread(new AudioParser());
+							audioThread.setDaemon(true);
+							audioThread.start();
+							Thread timeThread = new Thread(new LyricsParser());
+							timeThread.setDaemon(true);
+							timeThread.start();
+						}
+						break;
+					case "playOrNot":
+						if (stopPlaying) {
+							stopPlaying = !stopPlaying;
+						}
+						while (wayPlaying || waySearching) {
+							Thread.sleep(1);
+						}
+						if (handler == null) {
+							askForAChange = true;
+							lyricsLabelPre
+									.setText(quotes[(int) (quotes.length * Math
+											.random())]);
+							lyricsLabelMid
+									.setText(quotes[(int) (quotes.length * Math
+											.random())]);
+							lyricsLabelNext
+									.setText(quotes[(int) (quotes.length * Math
+											.random())]);
+							timeLabel.setText(alignment + timeLabelInit);
 							handler = new FLACAudioHandler(songToPlay);
 							if (lastPlayed != songToPlay) {
 								lastPlayed = songToPlay;
 							}
 							Thread.sleep(200);
-						} catch (IOException | BadFileFormatException
-								| InterruptedException e1) {
-							e1.printStackTrace();
-						}
-						if (playOrNot) {
-							if (askForAChange) {
-								Thread audioThread = new Thread(
-										new AudioParser());
-								audioThread.setDaemon(true);
-								audioThread.start();
-								isPlaying = true;
-							}
-							isPlaying = playOrNot;
-							Thread timeThread = new Thread(new LyricsParser());
-							timeThread.setDaemon(true);
-							timeThread.start();
-							playButton.setIcon(pauseIcon);
-						} else {
-							isPlaying = playOrNot;
-							playButton.setIcon(startIcon);
-						}
-					} else {
-						if (playOrNot) {
-							if (askForAChange) {
-								lyricsLabelPre
-										.setText(quotes[(int) (quotes.length * Math
-												.random())]);
-								lyricsLabelMid
-										.setText(quotes[(int) (quotes.length * Math
-												.random())]);
-								lyricsLabelNext
-										.setText(quotes[(int) (quotes.length * Math
-												.random())]);
-								timeLabel.setText(alignment + timeLabelInit);
-								try {
-									Thread.sleep(200);
-								} catch (InterruptedException e) {
-									e.printStackTrace();
+							if (playOrNot) {
+								logger.log(Level.INFO, "Start playing audio.");
+								if (askForAChange) {
+									stillHandlingLyrics = true;
+									Thread audioThread = new Thread(
+											new AudioParser());
+									audioThread.setDaemon(true);
+									audioThread.start();
+									isPlaying = true;
 								}
-								Thread audioThread = new Thread(
-										new AudioParser());
-								audioThread.setDaemon(true);
-								audioThread.start();
+								isPlaying = playOrNot;
 								Thread timeThread = new Thread(
 										new LyricsParser());
 								timeThread.setDaemon(true);
 								timeThread.start();
+								playButton.setIcon(pauseIcon);
+							} else {
+								logger.log(Level.INFO, "Pause current audio.");
+								isPlaying = playOrNot;
+								playButton.setIcon(startIcon);
 							}
-							isPlaying = playOrNot;
-							playButton.setIcon(pauseIcon);
 						} else {
-							isPlaying = playOrNot;
-							playButton.setIcon(startIcon);
+							if (playOrNot) {
+								if (askForAChange) {
+									logger.log(Level.INFO,
+											"Start playing audio.");
+									lyricsLabelPre
+											.setText(quotes[(int) (quotes.length * Math
+													.random())]);
+									lyricsLabelMid
+											.setText(quotes[(int) (quotes.length * Math
+													.random())]);
+									lyricsLabelNext
+											.setText(quotes[(int) (quotes.length * Math
+													.random())]);
+									timeLabel
+											.setText(alignment + timeLabelInit);
+									Thread.sleep(200);
+									stillHandlingLyrics = true;
+									Thread audioThread = new Thread(
+											new AudioParser());
+									audioThread.setDaemon(true);
+									audioThread.start();
+									Thread timeThread = new Thread(
+											new LyricsParser());
+									timeThread.setDaemon(true);
+									timeThread.start();
+								}
+								isPlaying = playOrNot;
+								playButton.setIcon(pauseIcon);
+							} else {
+								logger.log(Level.INFO, "Pause current audio.");
+								isPlaying = playOrNot;
+								playButton.setIcon(startIcon);
+							}
 						}
-					}
-					break;
-				case "stopPlaying":
-					while (wayPlaying || waySearching) {
-						;
-					}
-					synchronized (lock) {
+						break;
+					case "stopPlaying":
+						logger.log(Level.INFO, "Stop current audio.");
+						while (wayPlaying || waySearching) {
+							Thread.sleep(1);
+						}
 						askForAChange = true;
-						// reset GUI outlook.
-						slider.setValue(slider.getMinimum());
+						Thread.sleep(10);
+						synchronized (lock) {
+							// reset GUI outlook.
+							closeFile();
+							slider.setValue(slider.getMinimum());
+							lock.notify();
+						}
 						slider.setEnabled(false);
 						lyricsLabelPre
 								.setText("When the solution is simple, God is answering.");
@@ -1101,26 +1134,23 @@ public class FLACAudioHandler {
 								.setText("When the solution is simple, God is answering.");
 						generator.setTitle(quotes[(int) (quotes.length * Math
 								.random())]);
-						try {
-							closeFile();
-						} catch (IOException | InterruptedException e) {
-							e.printStackTrace();
+						if (stopPlaying) {
+							stopPlaying = !stopPlaying;
 						}
-						lock.notify();
+						break;
+					default:
+						break;
 					}
-					if (stopPlaying) {
-						stopPlaying = !stopPlaying;
-					}
-					break;
-				default:
-					break;
+				} catch (IOException | BadFileFormatException
+						| InterruptedException e) {
+					e.printStackTrace();
 				}
 			}
 		}
 
 		private class AudioParser implements Runnable {
-
 			public AudioParser() {
+				logger.log(Level.INFO, "Start decoding codec.");
 				if (filesNotBeenInitialized) {
 					return;
 				}
@@ -1185,15 +1215,15 @@ public class FLACAudioHandler {
 				double oneInMillion = 1e0 / 1e6;
 				while (!askForAChange) {
 					try {
+						while (stillHandlingLyrics) {
+							Thread.sleep(1);
+						}
 						if (handler == null) {
 							break;
 						}
 						if (playNextSong) {
-							new requestHandler("playNextSong");
-							Thread.sleep(200);
 							break;
 						} else if (playPreviousSong) {
-							new requestHandler("playPreviousSong");
 							break;
 						} else if (stopPlaying) {
 							new requestHandler("stopPlaying");
@@ -1276,8 +1306,14 @@ public class FLACAudioHandler {
 								}
 							}
 						}
-					} catch (IOException | InterruptedException
-							| BadFileFormatException e) {
+					} catch (IOException ex) {
+						JOptionPane.showMessageDialog(generator,
+								"The I/O device is not ready!",
+								"I/O Error(s) occurred!",
+								JOptionPane.ERROR_MESSAGE);
+						ex.printStackTrace();
+						new requestHandler("stopPlaying");
+					} catch (InterruptedException | BadFileFormatException e) {
 						e.printStackTrace();
 					}
 				}
@@ -1310,8 +1346,7 @@ public class FLACAudioHandler {
 			} else {
 				modString += "(no extended modifiers)";
 			}
-			System.out.println(keyString + "\n");
-			System.out.println(modString + "\n");
+
 			String actionString = "action key?";
 			if (e.isActionKey()) {
 				actionString += "YES";
@@ -1332,8 +1367,8 @@ public class FLACAudioHandler {
 			} else {
 				locationString += "unknown";
 			}
-			System.out.println(actionString + "\n");
-			System.out.println(locationString + "\n");
+			logger.log(Level.FINE, keyString + "\t" + modString + "\t"
+					+ actionString + "\t" + locationString);
 
 			if (e.getKeyCode() == 39 && e.getModifiersEx() == 128
 					|| e.getKeyCode() == 39 && e.getModifiersEx() == 512
@@ -1407,8 +1442,11 @@ public class FLACAudioHandler {
 			private String LastTimeFrame;
 
 			public LyricsParser() {
+				logger.log(Level.INFO, "Start parsing lyrics.");
+				stillHandlingLyrics = true;
 				LastTimeFrame = timeLabelInit;
 				if (filesNotBeenInitialized) {
+					logger.log(Level.SEVERE, "File has not been initialized!");
 					return;
 				}
 				fMetrics = lyricsLabelPre.getFontMetrics(new Font("Monospace",
@@ -1496,6 +1534,7 @@ public class FLACAudioHandler {
 					askForAChange = !askForAChange;
 				}
 				float currentKey = 0.0f;
+				stillHandlingLyrics = false;
 				while (!playNextSong && !playPreviousSong && !stopPlaying
 						&& !askForAChange) {
 					try {
@@ -2330,7 +2369,8 @@ public class FLACAudioHandler {
 	public class BadFileFormatException extends Exception {
 
 		/**
-		 * 
+		 * This exception would be wanted to throw when unexpected data/formats
+		 * of the file are detected.
 		 */
 		private static final long serialVersionUID = -6038660784354160702L;
 

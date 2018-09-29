@@ -12,6 +12,7 @@ import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.Iterator;
 
 import javax.swing.JFileChooser;
 import javax.swing.JLabel;
@@ -163,15 +164,12 @@ public class FLACFileExplorer {
 				lyrics.put(pennySec, lyricString);
 			}
 			reader.close();
-			float[] keysArray = new float[lyrics.keySet().size()];
+			// Resort time frame in ascending order.
+			Float[] keysArray = new Float[lyrics.keySet().size()];
+			lyrics.keySet().toArray(keysArray);
+			Arrays.sort(keysArray);
 			ArrayList<Float> fKeys = new ArrayList<Float>();
 			ArrayList<String> strValues = new ArrayList<String>();
-			int index = 0;
-			for (float f : lyrics.keySet()) {
-				keysArray[index] = f;
-				index++;
-			}
-			Arrays.sort(keysArray);
 			for (Float f : keysArray) {
 				fKeys.add(f);
 				strValues.add(lyrics.get(f));
@@ -179,6 +177,7 @@ public class FLACFileExplorer {
 			fKeys.trimToSize();
 			for (Float f : fKeys) {
 				if (f != fKeys.get(fKeys.size() - 1)) {
+					// handling display issues.
 					if (fontMetrics
 							.stringWidth(strValues.get(fKeys.indexOf(f))) > 475) {
 						Float differ = fKeys.get(fKeys.indexOf(f) + 1) - f;
@@ -283,7 +282,7 @@ public class FLACFileExplorer {
 		int i = songPath.length() - 1;
 		boolean slashNotFound = true;
 		while (slashNotFound) {
-			if (songPath.charAt(i) == '/' || songPath.charAt(i) == '\\') {
+			if (songPath.charAt(i) == File.separator.toCharArray()[0]) {
 				songName = copyOfPath.substring(i + 1);
 				break;
 			}
@@ -297,7 +296,8 @@ public class FLACFileExplorer {
 			return null;
 		}
 		String res = null;
-		for (File song : songList) {
+		for (Iterator<File> iterator = songList.iterator(); iterator.hasNext();) {
+			File song = iterator.next();
 			if (song.getName().toLowerCase().contains(response.toLowerCase())) {
 				res = song.getAbsolutePath();
 				break;
