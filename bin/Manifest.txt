@@ -1,6 +1,0 @@
-Manifest-Version: 1.0
-Created-By: 1.7.0_06 (JoySanctuary)
-Main-Class: com.java.audioplayer.FLACAudioHandler
-Name: com/java/audioplayer
-Sealed: true
-
