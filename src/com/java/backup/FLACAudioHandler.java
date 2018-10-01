@@ -1,4 +1,4 @@
-package com.java.audioplayer;
+package com.java.backup;
 
 import java.awt.Color;
 import java.awt.Component;
@@ -15,12 +15,11 @@ import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
 import java.io.BufferedInputStream;
 import java.io.EOFException;
+import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.RandomAccessFile;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -83,10 +82,10 @@ public class FLACAudioHandler {
 	private static JSlider slider = new JSlider(SwingConstants.HORIZONTAL, 0,
 			10000, 0);
 	private static ArrayList<Integer> rawHeader;
-	private static ArrayList<Path> songsHavePlayed;
-	private static Path songToPlay;
+	private static ArrayList<String> songsHavePlayed;
+	private static String songToPlay;
 	private static String songName;
-	private static Path lastPlayed;
+	private static String lastPlayed;
 	private static boolean isPlaying;
 	private static boolean askForAChange;
 	private static boolean filesNotBeenInitialized;
@@ -250,7 +249,7 @@ public class FLACAudioHandler {
 		filesNotBeenInitialized = true;
 		rawHeader = new ArrayList<Integer>();
 		isPlaying = false;
-		songsHavePlayed = new ArrayList<Path>();
+		songsHavePlayed = new ArrayList<String>();
 		lastPlayed = null;
 		songToPlay = FLACFileExplorer.songMenu(songsHavePlayed);
 		if (songToPlay != null) {
@@ -261,8 +260,6 @@ public class FLACAudioHandler {
 			} catch (IOException | BadFileFormatException e) {
 				e.printStackTrace();
 			}
-		} else {
-			System.out.println("Cannot find a playable audio file!");
 		}
 
 	}
@@ -307,11 +304,11 @@ public class FLACAudioHandler {
 		}
 	}
 
-	private FLACAudioHandler(Path songPath) throws IOException,
+	private FLACAudioHandler(String songPath) throws IOException,
 			BadFileFormatException {
 		try {
-			songName = FLACFileExplorer.getSongName(songPath.toString());
-			input = new Stream(songPath);
+			songName = FLACFileExplorer.getSongName(songPath);
+			input = new Stream(new File(songPath));
 			if (!songsHavePlayed.contains(songPath))
 				songsHavePlayed.add(songPath);
 			lastPlayed = songPath;
@@ -713,7 +710,7 @@ public class FLACAudioHandler {
 												JOptionPane.YES_NO_CANCEL_OPTION,
 												JOptionPane.QUESTION_MESSAGE);
 								if (reply == JOptionPane.YES_OPTION) {
-									songToPlay = Paths.get(searchRes);
+									songToPlay = searchRes;
 									lastPlayed = songToPlay;
 									if (!stopPlaying) {
 										stopPlaying = !stopPlaying;
@@ -936,12 +933,12 @@ public class FLACAudioHandler {
 						else
 							songToPlay = songsHavePlayed.get(songsHavePlayed
 									.indexOf(lastPlayed) + 1);
-						if (songToPlay != null) {
+						if (songToPlay != "") {
 							handler = new FLACAudioHandler(songToPlay);
 							lastPlayed = songToPlay;
 						} else {
 							songToPlay = lastPlayed;
-							handler = new FLACAudioHandler(songToPlay);
+							handler = new FLACAudioHandler(lastPlayed);
 							if (!stopPlaying) {
 								stopPlaying = !stopPlaying;
 							}
@@ -1463,13 +1460,12 @@ public class FLACAudioHandler {
 							+ '\u264f');
 				songName += "   ";
 				slider.setEnabled(true);
-				String lrcPathStr = FLACFileExplorer.getLRCFilePath(songToPlay
-						.toString());
+				String lrcPathStr = FLACFileExplorer.getLRCFilePath(songToPlay);
 				if (lrcPathStr != null) {
 					lyricsLabelPre.setForeground(new Color(0x003366));
 					lyricsLabelMid.setForeground(new Color(0x003366));
 					lyricsLabelNext.setForeground(new Color(0x003366));
-					lyricDict = FLACFileExplorer.lrcParser(Paths.get(lrcPathStr));
+					lyricDict = FLACFileExplorer.lrcParser(lrcPathStr);
 					// Resort time frames in ascending order.
 					Float[] frameKeys = new Float[lyricDict.keySet().size()];
 					lyricDict.keySet().toArray(frameKeys);
@@ -2295,8 +2291,8 @@ public class FLACAudioHandler {
 		private long bitBuffer;
 		private int bitBufferLen;
 
-		public Stream(Path file) throws IOException {
-			raf = new RandomAccessFile(file.toFile(), "r");
+		public Stream(File file) throws IOException {
+			raf = new RandomAccessFile(file, "r");
 			seekTo(0);
 		}
 

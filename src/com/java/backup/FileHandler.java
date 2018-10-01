@@ -1,5 +1,6 @@
-package com.java.audioplayer;
+package com.java.backup;
 
+import java.io.File;
 import java.io.IOException;
 import java.nio.file.DirectoryStream;
 import java.nio.file.Files;
@@ -10,7 +11,7 @@ public class FileHandler {
 
 	/**
 	 * Given a path name, parse files and directories in current path name, and
-	 * store files into fileList and directories folderList, respectively.
+	 * store files into fileList and directories folderList.
 	 * 
 	 * @param pathName
 	 * @param fileList
@@ -19,13 +20,10 @@ public class FileHandler {
 	 * @throws IOException
 	 */
 	public static boolean recursiveDirectoryHandler(Path pathName,
-			ArrayList<Path> fileList, ArrayList<Path> folderList,
+			ArrayList<File> fileList, ArrayList<Path> folderList,
 			String fileExtension) {
-		DirectoryStream<Path> stream;
-		if (pathName == null) {
-			return false;
-		}
 		boolean stillHasFolder = false;
+		DirectoryStream<Path> stream;
 		try {
 			if (!pathName.isAbsolute()) {
 				stream = Files.newDirectoryStream(pathName.toAbsolutePath());
@@ -35,7 +33,7 @@ public class FileHandler {
 			for (Path entry : stream) {
 				if (fileHander(entry, fileList, fileExtension)) {
 					;
-				} else if (entry.toFile().isDirectory()
+				} else if (entry.toAbsolutePath().toFile().isDirectory()
 						&& !folderList.contains(entry.toAbsolutePath())) {
 					folderList.add(entry.toAbsolutePath());
 					stillHasFolder = true;
@@ -50,15 +48,16 @@ public class FileHandler {
 
 	// This method is used for processing pure files only, not for
 	// directory.
-	public static boolean fileHander(Path entry, ArrayList<Path> files,
+	public static boolean fileHander(Path entry, ArrayList<File> files,
 			String fileExtension) {
 		// String processedFullName = delimiterCanceller(file);
 		boolean canHandleWithFileHandler = false;
-		if (entry.toFile().isFile()
-				&& entry.toAbsolutePath().toString().endsWith(fileExtension)
-				&& !files.contains(entry)) {
+		if (entry.toAbsolutePath().toFile().isFile()
+				&& entry.toAbsolutePath().toFile().getAbsolutePath()
+						.endsWith(fileExtension)
+				&& !files.contains(entry.toAbsolutePath().toFile())) {
 			canHandleWithFileHandler = true;
-			files.add(entry);
+			files.add(entry.toAbsolutePath().toFile());
 		}
 		return canHandleWithFileHandler;
 	}

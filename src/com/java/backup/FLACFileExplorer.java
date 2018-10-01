@@ -1,4 +1,4 @@
-package com.java.audioplayer;
+package com.java.backup;
 
 import java.awt.Font;
 import java.awt.FontMetrics;
@@ -19,35 +19,29 @@ import javax.swing.JLabel;
 
 public class FLACFileExplorer {
 	private static Path specifiedPath;
-	private static ArrayList<Path> songList;
-	private static ArrayList<Path> folderList;
-	private static ArrayList<Path> lyricsList;
-	private static Path songToPlay;
+	private static ArrayList<File> songList = new ArrayList<>();
+	private static ArrayList<Path> folderList = new ArrayList<>();
+	private static ArrayList<File> lyricsList = new ArrayList<>();
+	private static String songToPlay;
 	private static final String flacExt = ".flac";
 	private static final String lrcExt = ".lrc";
 	private static JFileChooser fileChooser;
-	private static Object lock;
+	private static Object lock = new Object();
 	private static int songIdx = 0;
 
 	static {
-		songList = new ArrayList<>();
-		folderList = new ArrayList<>();
-		lyricsList = new ArrayList<>();
-		lock = new Object();
 		songIdx = 0;
 		specifiedPath = null;
 		fileChooser = new JFileChooser();
 		fileChooser.setDialogTitle("Please choose a FLAC directory");
 		synchronized (lock) {
-			lock.notify();
 			fileChooser.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
+			lock.notify();
 		}
 		int response = fileChooser.showOpenDialog(null);
 		if (response == JFileChooser.APPROVE_OPTION) {
-			// Initialize file paths and directory paths based on current
-			// specified path.
-			specifiedPath = Paths.get(fileChooser.getSelectedFile()
-					.getAbsolutePath());
+			File file = fileChooser.getSelectedFile();
+			specifiedPath = Paths.get(file.getAbsolutePath());
 			refreshDirectory(flacExt);
 		}
 		// parsing files and directories under specified path
@@ -55,16 +49,15 @@ public class FLACFileExplorer {
 	}
 
 	/**
-	 * A path processor specifically for handling directories.
+	 * Construct a recursive directory handler
 	 * 
 	 * @param pathList
 	 */
 	public static void recursiveIterator(ArrayList<Path> folderPathList,
-			ArrayList<Path> fileStore, String fileExtension) {
+			ArrayList<File> fileStore, String fileExtension) {
 		if (specifiedPath == null) {
 			return;
 		}
-		// Recursively process directories which are folders.
 		for (Path eachPath : folderPathList) {
 			boolean stillHasAFolder = true;
 			while (stillHasAFolder) {
@@ -82,18 +75,19 @@ public class FLACFileExplorer {
 	 * @param timeFrame
 	 * @return
 	 */
-	public static HashMap<Float, String> lrcParser(Path lycFilePath) {
+	public static HashMap<Float, String> lrcParser(String lycFilePath) {
 		if (specifiedPath == null) {
 			return null;
 		}
 		Font monospace = new Font("Monospace", Font.TRUETYPE_FONT, 22);
 		JLabel label = new JLabel();
 		FontMetrics fontMetrics = label.getFontMetrics(monospace);
+		File lyricsFile = new File(lycFilePath);
 		HashMap<Float, String> lyrics = new HashMap<Float, String>();
 		try {
 			// Perhaps Windows could be a better place to try.
 			BufferedReader reader = new BufferedReader(new InputStreamReader(
-					new FileInputStream(lycFilePath.toFile()), "UTF-8"));
+					new FileInputStream(lyricsFile), "UTF-8"));
 			String content = "";
 			while ((content = reader.readLine()) != null) {
 				if (content.contains("//")) {
@@ -225,16 +219,17 @@ public class FLACFileExplorer {
 	}
 
 	// ShuffleMusic implementation
-	public static Path shuffle(ArrayList<Path> songArray) {
+	public static String shuffle(ArrayList<File> songArray) {
 		if (specifiedPath == null) {
 			return null;
 		}
-		Path songPath = null;
+		String songName = "";
 		if (songArray.isEmpty()) {
 			return null;
 		}
-		songPath = songArray.get((int) (Math.random() * songArray.size()));
-		return songPath.toAbsolutePath();
+		songName = songArray.get((int) (Math.random() * songArray.size()))
+				.getPath();
+		return songName;
 	}
 
 	public static void refreshDirectory(String fileExtension) {
@@ -273,8 +268,8 @@ public class FLACFileExplorer {
 			refreshDirectory(lrcExt);
 		}
 		String str = songPath.substring(0, songPath.length() - 5) + lrcExt;
-		for (Path f : lyricsList) {
-			if (f.toString().equals(str)) {
+		for (File f : lyricsList) {
+			if (f.getAbsolutePath().equals(str)) {
 				return str;
 			}
 		}
@@ -301,10 +296,10 @@ public class FLACFileExplorer {
 			return null;
 		}
 		String res = null;
-		for (Iterator<Path> iterator = songList.iterator(); iterator.hasNext();) {
-			Path song = iterator.next();
-			if (song.toString().contains(response.toLowerCase())) {
-				res = song.toString();
+		for (Iterator<File> iterator = songList.iterator(); iterator.hasNext();) {
+			File song = iterator.next();
+			if (song.getName().toLowerCase().contains(response.toLowerCase())) {
+				res = song.getAbsolutePath();
 				break;
 			}
 		}
@@ -312,7 +307,7 @@ public class FLACFileExplorer {
 	}
 
 	/* Be ware! Curly braces could be a potential rich source of bugs. */
-	public static Path songMenu(ArrayList<Path> songsHavePicked) {
+	public static String songMenu(ArrayList<String> songsHavePicked) {
 		if (specifiedPath == null) {
 			return null;
 		}
@@ -322,9 +317,9 @@ public class FLACFileExplorer {
 			} while (songsHavePicked.contains(songToPlay));
 			if (!songsHavePicked.contains(songToPlay))
 				songIdx++;
-			return songToPlay;
 		} else {
-			return null;
+			return "";
 		}
+		return songToPlay;
 	}
 }
