@@ -45,9 +45,6 @@ import javax.swing.plaf.basic.BasicSliderUI;
 import javax.swing.plaf.metal.MetalSliderUI;
 
 /**
- * Frankly speaking, it is actually sort of pain-staking to implement such a
- * program for FLAC audio playing. Divide & conquer, make it as general as you
- * can. Any more lessons from this? Pains and sweets.
  * 
  * @author JoySanctuary
  *
@@ -252,7 +249,7 @@ public class FLACAudioHandler {
 		isPlaying = false;
 		songsHavePlayed = new ArrayList<Path>();
 		lastPlayed = null;
-		songToPlay = FLACFileExplorer.songMenu(songsHavePlayed);
+		songToPlay = FileExplorer.songMenu(songsHavePlayed);
 		if (songToPlay != null) {
 			filesNotBeenInitialized = false;
 			try {
@@ -265,6 +262,10 @@ public class FLACAudioHandler {
 			System.out.println("Cannot find a playable audio file!");
 		}
 
+	}
+
+	public static ArrayList<Path> getSongsHavePlayed() {
+		return songsHavePlayed;
 	}
 
 	private static void setSliderPosition(final double t) {
@@ -310,7 +311,7 @@ public class FLACAudioHandler {
 	private FLACAudioHandler(Path songPath) throws IOException,
 			BadFileFormatException {
 		try {
-			songName = FLACFileExplorer.getSongName(songPath.toString());
+			songName = FileExplorer.getSongName(songPath);
 			input = new Stream(songPath);
 			if (!songsHavePlayed.contains(songPath))
 				songsHavePlayed.add(songPath);
@@ -322,10 +323,10 @@ public class FLACAudioHandler {
 			if (songsHavePlayed.contains(songPath)) {
 				songsHavePlayed.remove(songPath);
 			}
-			FLACFileExplorer.refreshDirectory(flacExt);
-			FLACFileExplorer.refreshDirectory(lrcExt);
+			FileExplorer.refreshDirectory(flacExt);
+			FileExplorer.refreshDirectory(lrcExt);
 			if (songsHavePlayed.isEmpty()) {
-				songToPlay = FLACFileExplorer.songMenu(songsHavePlayed);
+				songToPlay = FileExplorer.songMenu(songsHavePlayed);
 			} else {
 				songToPlay = songsHavePlayed.get(songsHavePlayed
 						.indexOf(lastPlayed));
@@ -686,8 +687,8 @@ public class FLACAudioHandler {
 						if (rawInput == null || rawInput.equals(""))
 							return;
 						else {
-							String searchRes = FLACFileExplorer
-									.fileExplorer(rawInput);
+							String searchRes = FileExplorer
+									.fileSearcher(rawInput);
 							Thread.sleep(100);
 							if (searchRes == null) {
 								int answer = JOptionPane
@@ -698,9 +699,9 @@ public class FLACAudioHandler {
 												JOptionPane.YES_NO_OPTION,
 												JOptionPane.ERROR_MESSAGE);
 								if (answer == JOptionPane.YES_OPTION) {
-									FLACFileExplorer.refreshDirectory(flacExt);
+									FileExplorer.refreshDirectory(flacExt);
 									Thread.sleep(100);
-									FLACFileExplorer.refreshDirectory(lrcExt);
+									FileExplorer.refreshDirectory(lrcExt);
 									Thread.sleep(10);
 									continue;
 								} else
@@ -710,8 +711,9 @@ public class FLACAudioHandler {
 										.showConfirmDialog(
 												pandaButton,
 												"Matched song has been found: "
-														+ FLACFileExplorer
-																.getSongName(searchRes)
+														+ FileExplorer
+																.getSongName(Paths
+																		.get(searchRes))
 														+ "\n \"YES\" to start play, \"NO\" to start next search, \"CANCEL\" to quit searching.",
 												"Search Results",
 												JOptionPane.YES_NO_CANCEL_OPTION,
@@ -935,8 +937,7 @@ public class FLACAudioHandler {
 						}
 						if (songsHavePlayed.indexOf(lastPlayed) == (songsHavePlayed
 								.size() - 1))
-							songToPlay = FLACFileExplorer
-									.songMenu(songsHavePlayed);
+							songToPlay = FileExplorer.songMenu(songsHavePlayed);
 						else
 							songToPlay = songsHavePlayed.get(songsHavePlayed
 									.indexOf(lastPlayed) + 1);
@@ -1157,16 +1158,16 @@ public class FLACAudioHandler {
 
 		private class AudioParser implements Runnable {
 			public AudioParser() {
-				logger.log(Level.INFO, "Start decoding codec.");
 				if (filesNotBeenInitialized) {
 					return;
 				}
-				clipStartTime = 0;
-				AudioFormat format = new AudioFormat(
-						handler.getSampleRateInHz(),
-						handler.getBitsPerSample(), handler.getNumOfChannels(),
-						true, false);
+				logger.log(Level.INFO, "Start decoding codec.");
 				try {
+					clipStartTime = 0;
+					AudioFormat format = new AudioFormat(
+							handler.getSampleRateInHz(),
+							handler.getBitsPerSample(),
+							handler.getNumOfChannels(), true, false);
 					line = (SourceDataLine) AudioSystem
 							.getLine(new DataLine.Info(SourceDataLine.class,
 									format));
@@ -1467,14 +1468,13 @@ public class FLACAudioHandler {
 							+ '\u264f');
 				songName += "   ";
 				slider.setEnabled(true);
-				String lrcPathStr = FLACFileExplorer.getLRCFilePath(songToPlay
+				String lrcPathStr = FileExplorer.getLRCFilePath(songToPlay
 						.toString());
 				if (lrcPathStr != null) {
 					lyricsLabelPre.setForeground(new Color(0x003366));
 					lyricsLabelMid.setForeground(new Color(0x003366));
 					lyricsLabelNext.setForeground(new Color(0x003366));
-					lyricDict = FLACFileExplorer.lrcParser(Paths
-							.get(lrcPathStr));
+					lyricDict = FileExplorer.lrcParser(Paths.get(lrcPathStr));
 					// Resort time frames in ascending order.
 					Float[] frameKeys = new Float[lyricDict.keySet().size()];
 					lyricDict.keySet().toArray(frameKeys);
