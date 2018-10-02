@@ -412,7 +412,11 @@ public class FLACAudioHandler {
 			return;
 		}
 		while (!isReady) {
-			;
+			try {
+				Thread.sleep(1);
+			} catch (InterruptedException e) {
+				e.printStackTrace();
+			}
 		}
 		generator = GUIGenerator.GUIGeneratorInitializer();
 		handler = null;
@@ -694,8 +698,8 @@ public class FLACAudioHandler {
 												JOptionPane.YES_NO_OPTION,
 												JOptionPane.ERROR_MESSAGE);
 								if (answer == JOptionPane.YES_OPTION) {
-									Thread.sleep(100);
 									FLACFileExplorer.refreshDirectory(flacExt);
+									Thread.sleep(100);
 									FLACFileExplorer.refreshDirectory(lrcExt);
 									Thread.sleep(10);
 									continue;
@@ -1784,7 +1788,7 @@ public class FLACAudioHandler {
 		}
 	}
 
-	public static void main(String[] args) {
+	public static void main(String[] args) throws IOException {
 		FLACAudioHandler.audioPlayerInitializer();
 	}
 

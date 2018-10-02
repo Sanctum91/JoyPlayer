@@ -28,34 +28,79 @@ public class FLACFileExplorer {
 	private static JFileChooser fileChooser;
 	private static Object lock;
 	private static int songIdx = 0;
+	private static boolean alreadyStartOneApp;
 
 	static {
+		// Make sure that there is no more than one single Java process that do
+		// "plays the FLAC audio file".
+		alreadyStartOneApp = false;
+		Process process = null;
+		try {
+			process = Runtime.getRuntime().exec("jps");
+			BufferedReader br = new BufferedReader(new InputStreamReader(
+					process.getInputStream()));
+			String p = null;
+			int count = 0;
+			String mainClassName = FLACAudioHandler.class.getSimpleName();
+			String fileSource = FLACAudioHandler.class.getResource(
+					mainClassName + ".class").toString();
+			if (fileSource.startsWith("jar:file:/")) {
+				fileSource = fileSource.substring(10);
+				fileSource = fileSource.substring(0,
+						fileSource.lastIndexOf("!"));
+			} else if (fileSource.startsWith("file:/")) {
+				fileSource = fileSource.substring(6);
+			}
+			Path sourceFile = Paths.get(fileSource);
+			String fileSourceName = sourceFile.toAbsolutePath().toString();
+			fileSourceName = fileSourceName.substring(fileSourceName
+					.lastIndexOf(File.separator) + 1);
+			System.out.println(mainClassName);
+			System.out.println(fileSourceName);
+			while ((p = br.readLine()) != null) {
+				System.out.println(p);
+				if (p.endsWith(" " + mainClassName)
+						|| p.endsWith(" " + fileSourceName)) {
+					count++;
+				}
+			}
+			if (count > 1) {
+				alreadyStartOneApp = !alreadyStartOneApp;
+			}
+			br.close();
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
 		songList = new ArrayList<>();
 		folderList = new ArrayList<>();
 		lyricsList = new ArrayList<>();
 		lock = new Object();
 		songIdx = 0;
 		specifiedPath = null;
-		fileChooser = new JFileChooser();
-		fileChooser.setDialogTitle("Please choose a FLAC directory");
-		synchronized (lock) {
-			lock.notify();
-			fileChooser.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
-		}
-		int response = fileChooser.showOpenDialog(null);
-		if (response == JFileChooser.APPROVE_OPTION) {
-			// Initialize file paths and directory paths based on current
-			// specified path.
-			specifiedPath = Paths.get(fileChooser.getSelectedFile()
-					.getAbsolutePath());
-			FileHandler.recursiveDirectoryHandler(specifiedPath, songList,
-					folderList, flacExt);
+		if (!alreadyStartOneApp) {
+			fileChooser = new JFileChooser();
+			fileChooser.setDialogTitle("Please choose a FLAC directory");
+			synchronized (lock) {
+				lock.notify();
+				fileChooser.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
+			}
+			int response = fileChooser.showOpenDialog(null);
+			if (response == JFileChooser.APPROVE_OPTION) {
+				// Initialize file paths and directory paths based on current
+				// specified path.
+				specifiedPath = Paths.get(fileChooser.getSelectedFile()
+						.getAbsolutePath());
+				FileHandler.recursiveDirectoryHandler(specifiedPath, songList,
+						folderList, flacExt);
+			}
 		}
 		// parsing files and directories under specified path
 		// refreshDirectory(lrcExt);
 	}
 
-	private FLACFileExplorer() {
+	private FLACFileExplorer() throws IOException {
+
 	}
 
 	// LRC file parser
@@ -285,7 +330,8 @@ public class FLACFileExplorer {
 		String res = null;
 		for (Iterator<Path> iterator = songList.iterator(); iterator.hasNext();) {
 			Path song = iterator.next();
-			if (song.toString().contains(response.toLowerCase())) {
+			if (song.getFileName().toString().toLowerCase()
+					.contains(response.toLowerCase())) {
 				res = song.toString();
 				break;
 			}
