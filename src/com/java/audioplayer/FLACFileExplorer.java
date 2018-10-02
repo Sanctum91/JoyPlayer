@@ -55,6 +55,9 @@ public class FLACFileExplorer {
 		// refreshDirectory(lrcExt);
 	}
 
+	private FLACFileExplorer() {
+	}
+
 	// LRC file parser
 	/**
 	 * According to given time frame, output corresponding lyrics.
@@ -206,7 +209,7 @@ public class FLACFileExplorer {
 	}
 
 	// ShuffleMusic implementation
-	public static Path shuffle(ArrayList<Path> songArray) {
+	private static Path shuffle(ArrayList<Path> songArray) {
 		if (specifiedPath == null) {
 			return null;
 		}

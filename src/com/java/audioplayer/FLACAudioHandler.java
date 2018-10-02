@@ -76,7 +76,7 @@ public class FLACAudioHandler {
 	private double audioLength;
 	private int constantBlockSize;
 	private long metadataEndPos;
-	public static final String lrcExt = ".lrc";
+	private static final String lrcExt = ".lrc";
 	private static byte[] sampleInBytes = null;
 	private static long clipStartTime;
 	private static long currentTimeInMicros;
@@ -1910,7 +1910,7 @@ public class FLACAudioHandler {
 	 * @throws IOException
 	 * @throws Exception
 	 */
-	public static Object[] readNextBlock(boolean verifyCRC8)
+	private static Object[] readNextBlock(boolean verifyCRC8)
 			throws BadFileFormatException, IOException {
 		/* Sync code */
 		if (verifyCRC8) {
@@ -2289,7 +2289,7 @@ public class FLACAudioHandler {
 		}
 	}
 
-	public static final class Stream implements Runnable {
+	private static final class Stream implements Runnable {
 		private RandomAccessFile raf;
 		private long bytePosition;
 		private InputStream byteBuffer;
@@ -2371,7 +2371,7 @@ public class FLACAudioHandler {
 		}
 	}
 
-	public class BadFileFormatException extends Exception {
+	private class BadFileFormatException extends Exception {
 
 		/**
 		 * This exception would be wanted to throw when unexpected data/formats

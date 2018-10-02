@@ -8,6 +8,9 @@ import java.util.ArrayList;
 
 public class FileHandler {
 
+	private FileHandler() {
+	}
+
 	/**
 	 * Given a path name, parse files and directories in current path name, and
 	 * store files into fileList and directories folderList, respectively.
