@@ -1469,7 +1469,8 @@ public class FLACAudioHandler {
 					lyricsLabelPre.setForeground(new Color(0x003366));
 					lyricsLabelMid.setForeground(new Color(0x003366));
 					lyricsLabelNext.setForeground(new Color(0x003366));
-					lyricDict = FLACFileExplorer.lrcParser(Paths.get(lrcPathStr));
+					lyricDict = FLACFileExplorer.lrcParser(Paths
+							.get(lrcPathStr));
 					// Resort time frames in ascending order.
 					Float[] frameKeys = new Float[lyricDict.keySet().size()];
 					lyricDict.keySet().toArray(frameKeys);

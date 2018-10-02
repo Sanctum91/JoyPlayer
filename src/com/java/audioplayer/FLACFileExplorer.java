@@ -48,30 +48,11 @@ public class FLACFileExplorer {
 			// specified path.
 			specifiedPath = Paths.get(fileChooser.getSelectedFile()
 					.getAbsolutePath());
-			refreshDirectory(flacExt);
+			FileHandler.recursiveDirectoryHandler(specifiedPath, songList,
+					folderList, flacExt);
 		}
 		// parsing files and directories under specified path
 		// refreshDirectory(lrcExt);
-	}
-
-	/**
-	 * A path processor specifically for handling directories.
-	 * 
-	 * @param pathList
-	 */
-	public static void recursiveIterator(ArrayList<Path> folderPathList,
-			ArrayList<Path> fileStore, String fileExtension) {
-		if (specifiedPath == null) {
-			return;
-		}
-		// Recursively process directories which are folders.
-		for (Path eachPath : folderPathList) {
-			boolean stillHasAFolder = true;
-			while (stillHasAFolder) {
-				stillHasAFolder = FileHandler.recursiveDirectoryHandler(
-						eachPath, fileStore, folderList, fileExtension);
-			}
-		}
 	}
 
 	// LRC file parser
@@ -120,7 +101,7 @@ public class FLACFileExplorer {
 				int min = Integer.valueOf(minString);
 				int s = Integer.valueOf(secondString);
 				int penny = Integer.valueOf(pennyString);
-				float pennySec = (float) (min * 60 + s + penny * 0.01);
+				float pennySec = (float) (min * 60 + s + penny * 0.01f);
 				String lyricString = content
 						.substring(content.indexOf(']') + 1);
 				if (lyricString.contains(" ")) {
@@ -249,7 +230,6 @@ public class FLACFileExplorer {
 				folderList.clear();
 			FileHandler.recursiveDirectoryHandler(specifiedPath, songList,
 					folderList, fileExtension);
-			recursiveIterator(folderList, songList, flacExt);
 			break;
 		case lrcExt:
 			if (!lyricsList.isEmpty())
@@ -258,7 +238,6 @@ public class FLACFileExplorer {
 				folderList.clear();
 			FileHandler.recursiveDirectoryHandler(specifiedPath, lyricsList,
 					folderList, lrcExt);
-			recursiveIterator(folderList, lyricsList, lrcExt);
 			break;
 		default:
 			break;

@@ -18,34 +18,35 @@ public class FileHandler {
 	 * @return
 	 * @throws IOException
 	 */
-	public static boolean recursiveDirectoryHandler(Path pathName,
+	public static void recursiveDirectoryHandler(Path pathName,
 			ArrayList<Path> fileList, ArrayList<Path> folderList,
 			String fileExtension) {
 		DirectoryStream<Path> stream;
 		if (pathName == null) {
-			return false;
+			return;
 		}
-		boolean stillHasFolder = false;
 		try {
 			if (!pathName.isAbsolute()) {
 				stream = Files.newDirectoryStream(pathName.toAbsolutePath());
 			} else {
 				stream = Files.newDirectoryStream(pathName);
 			}
+			// As long as current entry is a directory, recursively process them
+			// till the entry has been a file, which requires recursion, and the
+			// base case is when the entry has been a file, add the file.
+
 			for (Path entry : stream) {
 				if (fileHander(entry, fileList, fileExtension)) {
 					;
-				} else if (entry.toFile().isDirectory()
-						&& !folderList.contains(entry.toAbsolutePath())) {
-					folderList.add(entry.toAbsolutePath());
-					stillHasFolder = true;
+				} else if (Files.isDirectory(entry)) {
+					recursiveDirectoryHandler(entry, fileList, folderList,
+							fileExtension);
 				}
 			}
 			stream.close();
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
-		return stillHasFolder;
 	}
 
 	// This method is used for processing pure files only, not for
@@ -54,8 +55,8 @@ public class FileHandler {
 			String fileExtension) {
 		// String processedFullName = delimiterCanceller(file);
 		boolean canHandleWithFileHandler = false;
-		if (entry.toFile().isFile()
-				&& entry.toAbsolutePath().toString().endsWith(fileExtension)
+		if (Files.isRegularFile(entry)
+				&& entry.toString().endsWith(fileExtension)
 				&& !files.contains(entry)) {
 			canHandleWithFileHandler = true;
 			files.add(entry);
