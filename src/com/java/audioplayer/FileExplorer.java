@@ -17,7 +17,7 @@ import java.util.Iterator;
 import javax.swing.JFileChooser;
 import javax.swing.JLabel;
 
-public class FileExplorer {
+public final class FileExplorer {
 	private static Path specifiedPath;
 	private static ArrayList<Path> FLACsongList;
 	private static ArrayList<Path> mp3songList;
@@ -44,8 +44,8 @@ public class FileExplorer {
 					process.getInputStream()));
 			String p = null;
 			int count = 0;
-			String mainClassName = FLACAudioHandler.class.getSimpleName();
-			String fileSource = FLACAudioHandler.class.getResource(
+			String mainClassName = GUISynthesiszer.class.getSimpleName();
+			String fileSource = GUISynthesiszer.class.getResource(
 					mainClassName + ".class").toString();
 			if (fileSource.startsWith("jar:file:/")) {
 				fileSource = fileSource.substring(10);
@@ -351,12 +351,11 @@ public class FileExplorer {
 		if (specifiedPath == null) {
 			return null;
 		}
-		if (Math.random() > 0.9) {
+		if (Math.random() > 0.3) {
 			if (FLACsongIdx < FLACsongList.size()) {
 				do {
 					songToPlay = FLACsongList
 							.get((int) (Math.random() * FLACsongList.size()));
-					System.out.println(songToPlay.toString());
 				} while (songsHavePicked.contains(songToPlay));
 				if (!songsHavePicked.contains(songToPlay))
 					FLACsongIdx++;
