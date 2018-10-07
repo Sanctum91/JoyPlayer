@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 
 # <h1> [FLAC & mp3 Audio Player](https://github.com/JoySanctuary/FLAC-Audio-Player)
 - This project is an implementation of a lightweight FLAC audio player. Copies of this project may be made for your own use and for distribution to others, provided that you do not charge any fee for such copies and further provided that each copy contains this Copyright Notice._ _Also it is only allowed to distribute this project under GPL-3.0.
@@ -8,7 +7,7 @@
 
 # <h2> This is how the player UI looks like.
 
-![Image of PlayerUI](https://github.com/JoySanctuary/FLAC-Audio-Player/Player_UI.png)
+![Image of PlayerUI](https://github.com/JoySanctuary/JoyPlayer/blob/master/Player_UI.png)
 
 # <h2> Features:
 - [x] Upon starting, simply choose your audio library folder that contains any FLAC or mp3 audio, and the rest job is the player's.
