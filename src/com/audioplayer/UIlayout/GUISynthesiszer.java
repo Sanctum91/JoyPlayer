@@ -1333,8 +1333,11 @@ public final class GUISynthesiszer extends JFrame implements MouseListener,
 									Thread.sleep(100);
 									line.close();
 									line = null;
-									stopPlaying = true;
 									lock.notify();
+									playNextSong = true;
+									Thread.sleep(1000);
+									new requestHandler("playNextSong");
+									break;
 								}
 							}
 						}
@@ -1827,6 +1830,7 @@ public final class GUISynthesiszer extends JFrame implements MouseListener,
 			// }
 			// }
 			playButton.setIcon(startIcon);
+			slider.setValue(slider.getMinimum());
 			timeLabel.setText(alignment + timeLabelInit);
 		}
 	}
