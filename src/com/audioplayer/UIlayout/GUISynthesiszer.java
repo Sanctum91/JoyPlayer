@@ -1156,7 +1156,8 @@ public final class GUISynthesiszer extends JFrame implements MouseListener,
 									"Failed to create an instance for current null instance of mp3 invoker. ");
 						Thread.sleep(300);
 						if (mp3Invoker.decodeFrameHeader()) {
-							mp3Duration = mp3Invoker.getTotoalDuration();
+							mp3Duration = mp3Invoker
+									.getTotoalDuration(songToPlay);
 							clipStartTime = mp3Invoker.getPosition();
 							logger.log(Level.INFO,
 									"mp3 SourceDataLine initialized successfully.");
@@ -1175,7 +1176,8 @@ public final class GUISynthesiszer extends JFrame implements MouseListener,
 						}
 						logger.log(Level.INFO, "Initialize mp3 SourceDataLine.");
 						if (mp3Invoker.decodeFrameHeader()) {
-							mp3Duration = mp3Invoker.getTotoalDuration();
+							mp3Duration = mp3Invoker
+									.getTotoalDuration(songToPlay);
 							clipStartTime = mp3Invoker.getPosition();
 							logger.log(Level.INFO,
 									"mp3 SourceDataLine initialized successfully.");
@@ -1356,9 +1358,8 @@ public final class GUISynthesiszer extends JFrame implements MouseListener,
 							if (request >= 0) {
 								currentTimeInMicros = Math
 										.round(mp3Invoker
-												.readNextDecodebaleFrame(request) * 1e3) + 25;
-								clipStartTime = mp3Invoker.getPosition()
-										- currentTimeInMicros;
+												.readNextDecodebaleFrame(request) * 1e3) - 50;
+								clipStartTime = -currentTimeInMicros;
 								request = -1.0;
 							} else {
 								currentTimeInMicros = mp3Invoker.getPosition()
@@ -1369,8 +1370,15 @@ public final class GUISynthesiszer extends JFrame implements MouseListener,
 								if (!keepStreaming) {
 									keepStreaming = !keepStreaming;
 								}
-								stopPlaying = true;
-								new requestHandler("stopPlaying");
+								synchronized (lock) {
+									lock.notify();
+									// stopPlaying = true;
+									// new requestHandler("stopPlaying");
+									playNextSong = true;
+									Thread.sleep(1000);
+									new requestHandler("playNextSong");
+								}
+								break;
 							}
 						} else {
 							stopPlaying = true;
@@ -1811,19 +1819,14 @@ public final class GUISynthesiszer extends JFrame implements MouseListener,
 					e.printStackTrace();
 				}
 			}
-			while (getState() == JFrame.ICONIFIED) {
-				try {
-					Thread.sleep(50);
-				} catch (InterruptedException e) {
-					e.printStackTrace();
-				}
-			}
-			if (isPlaying) {
-				isPlaying = !isPlaying;
-			}
-			if (!isPlaying) {
-				playButton.setIcon(startIcon);
-			}
+			// while (getState() == JFrame.ICONIFIED) {
+			// try {
+			// Thread.sleep(50);
+			// } catch (InterruptedException e) {
+			// e.printStackTrace();
+			// }
+			// }
+			playButton.setIcon(startIcon);
 			timeLabel.setText(alignment + timeLabelInit);
 		}
 	}
