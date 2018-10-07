@@ -19,13 +19,4 @@
 
 # <h3> Notes:
 
-All the features above have been successfully tested within Windows 10 runtime environment.
-=======
-# FLAC Audio Player
-- _This project is an implementation of a lightweight FLAC audio player. Copies of this project may be made for your own use and for distribution to others, provided that you do not charge any fee for such copies and further provided that each copy contains this Copyright Notice._ _Also it is only allowed to distribute this project under GPL-3.0._
-- *Java version "1.7.0_80" or above recommended.*
-- *Allowing lyrics to show on the label simultanenously while playing audio data.*
-<<<<<<< HEAD
->>>>>>> 05bbaf43be88a97bae1e0f832a91ce753fb27138
-=======
->>>>>>> 05bbaf43be88a97bae1e0f832a91ce753fb27138
+# <h4> All the features above have been successfully tested within Windows 10 runtime environment.
