@@ -32,6 +32,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 
 import javax.sound.sampled.LineUnavailableException;
+import javax.sound.sampled.UnsupportedAudioFileException;
 import javax.swing.JOptionPane;
 
 import javazoom.jl.decoder.BitstreamException;
@@ -41,7 +42,7 @@ import javazoom.jl.decoder.JavaLayerException;
 import javazoom.jl.decoder.SampleBuffer;
 
 /**
- * The <code>MP3</code> class implements a simple command-line player for MPEG
+ * The <code>MP3Codec</code> class implements a simple command-line player for MPEG
  * audio files.
  *
  * @author Mat McGowan (mdm@techie.com)
@@ -57,6 +58,10 @@ public class MP3Codec {
 	private RandomAccessFile accessor = null;
 	private BufferedInputStream in;
 	private Header header = null;
+	private int samplesPerFrame;
+	private int totalFrames;
+	private byte[] samples;
+	private SampleBuffer buffer;
 
 	/**
 	 * Create An instance of MP3 in singleton pattern.
@@ -147,9 +152,11 @@ public class MP3Codec {
 	 * @param songPath
 	 * @return the total duration
 	 * @throws IOException
+	 * @throws UnsupportedAudioFileException
 	 */
-	public float getTotoalDuration() throws IOException {
-		return mp3Codec.player.getTotalDuration((int) (accessor.length()));
+	public float getTotoalDuration(Path filePath) throws IOException {
+		return mp3Codec.player.getTotalDuration((int) mp3Codec.accessor
+				.length());
 	}
 
 	/**
@@ -263,9 +270,15 @@ public class MP3Codec {
 
 	/**
 	 * Initialize current Header instance with that of Class Player's.
+	 * 
+	 * @throws IOException
 	 */
-	private void getHeader() {
+	private void getHeader() throws IOException {
 		mp3Codec.header = mp3Codec.player.getHeader();
+		mp3Codec.samplesPerFrame = header.layer() == 1 ? samplesForLayerI
+				: samplesForLayerIII;
+		mp3Codec.totalFrames = mp3Codec.header
+				.max_number_of_frames((int) mp3Codec.accessor.length());
 	}
 
 	/**
@@ -296,27 +309,26 @@ public class MP3Codec {
 			return 0;
 		}
 		mp3Codec.getHeader();
-		int samplesPerFrame = header.layer() == 1 ? samplesForLayerI
-				: samplesForLayerIII;
-		int totalFrames = mp3Codec.header
-				.max_number_of_frames((int) mp3Codec.accessor.length());
-		long samplePos = Math.round(request * samplesPerFrame * totalFrames);
-		// Get number of frames ahead of the request position
-		int numOfFramesAhead = (int) Math.round(totalFrames * request);
-		int remainderSamples = (int) (samplePos - numOfFramesAhead
-				* samplesPerFrame);
-		numOfFramesAhead += remainderSamples / samplesPerFrame;
-		long bytePosition = numOfFramesAhead * header.calculate_framesize();
-		mp3Codec.seekTo(bytePosition);
-		remainderSamples = remainderSamples % samplesPerFrame;
-		double result = (numOfFramesAhead + 1e0 * remainderSamples
-				/ header.calculate_framesize())
-				* samplesPerFrame / (mp3Codec.header.frequency() * 1e-3);
 
+		long samplePos = Math.round(request * mp3Codec.samplesPerFrame
+				* mp3Codec.totalFrames);
+		// Get number of frames ahead of the request position
+		int numOfFramesAhead = (int) (mp3Codec.totalFrames * request);
+		int remainderSamples = (int) (samplePos - numOfFramesAhead
+				* mp3Codec.samplesPerFrame);
+		numOfFramesAhead += remainderSamples / mp3Codec.samplesPerFrame;
+		remainderSamples = remainderSamples % mp3Codec.samplesPerFrame;
+		double result = (remainderSamples == 0 ? numOfFramesAhead
+				: ++numOfFramesAhead)
+				* mp3Codec.samplesPerFrame
+				/ (mp3Codec.header.frequency() * 1e-3);
+
+		mp3Codec.seekTo(numOfFramesAhead
+				* mp3Codec.header.calculate_framesize());
 		if (remainderSamples > 0) {
-			SampleBuffer buffer = mp3Codec.getSampleBuffer();
-			if (buffer != null) {
-				byte[] samples = mp3Codec.player
+			mp3Codec.buffer = mp3Codec.getSampleBuffer();
+			if (mp3Codec.buffer != null) {
+				mp3Codec.samples = mp3Codec.player
 						.getJavaSoundAudioDevice()
 						.toByteArray(
 								buffer.getBuffer(),
@@ -325,13 +337,14 @@ public class MP3Codec {
 										.getBufferLength() - remainderSamples)
 										: (buffer.getBufferLength()
 												- remainderSamples - 1));
+				mp3Codec.player.getSourceDataLine().write(samples, 0,
+						samples.length);
 				synchronized (mp3Codec) {
 					mp3Codec.notify();
+					mp3Codec.player.getSourceDataLine().close();
 					mp3Codec.player.getSourceDataLine().open();
 					mp3Codec.player.getSourceDataLine().start();
 				}
-				mp3Codec.player.getSourceDataLine().write(samples, 0,
-						samples.length);
 			}
 		} else {
 			synchronized (mp3Codec) {
@@ -342,5 +355,4 @@ public class MP3Codec {
 		}
 		return result;
 	}
-
 }

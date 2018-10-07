@@ -1,3 +1,18 @@
+/*
+ *    Copyright [2018] [Justin Lee]
+
+   Licensed under the Apache License, Version 2.0 (the "License");
+   you may not use this file except in compliance with the License.
+   You may obtain a copy of the License at
+
+       http://www.apache.org/licenses/LICENSE-2.0
+
+   Unless required by applicable law or agreed to in writing, software
+   distributed under the License is distributed on an "AS IS" BASIS,
+   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   See the License for the specific language governing permissions and
+   limitations under the License.
+ */
 package com.audioplayer.UIlayout;
 
 import java.awt.Color;
@@ -48,20 +63,6 @@ import com.filesystem.handlers.FileExplorer;
 import com.flac.decoder.FLACCodec;
 import com.flac.decoder.FLACCodec.BadFileFormatException;
 
-/**
- * An implementation of the GUI layout. use a UI slider to gain random access
- * to any sample position within audio. Therefore, there are two main tasks
- * to do: one is to implement a UI slider, the other is to locate the
- * specific sample corresponding to the progress of the slider specified by
- * user.
- */
-
-/**
- * An implementation of GUI layout.
- * 
- * @author JoySanctuary
- *
- */
 public final class GUISynthesiszer extends JFrame implements MouseListener,
 		KeyListener {
 	/**

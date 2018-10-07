@@ -240,15 +240,18 @@ public final class Bitstream implements BitstreamErrors {
 			throw newBitstreamException(STREAM_ERROR, ex);
 		}
 	}
-	
+
 	/**
 	 * Get total duration of current audio data in milliseconds.
-	 * @param streamsize in bytes.
+	 * 
+	 * @param streamsize
+	 *            in bytes.
 	 * @return
 	 */
 	public float getAudioDuration(int streamsize) {
 		return header.total_ms(streamsize);
 	}
+
 	/**
 	 * Reads and parses the next frame from the input source.
 	 * 
@@ -300,7 +303,6 @@ public final class Bitstream implements BitstreamErrors {
 		} else
 			return null;
 	}
-	
 
 	/**
 	 * Read next MP3 frame.

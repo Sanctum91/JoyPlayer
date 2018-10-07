@@ -1,0 +1,6 @@
+Manifest-Version: 1.0
+Created-By: 1.7.0_06 (JoySanctuary)
+Main-Class: com.audioplayer.UIlayout.GUISynthesiszer
+Name: com/audioplayer/UIlayout
+Sealed: true
+

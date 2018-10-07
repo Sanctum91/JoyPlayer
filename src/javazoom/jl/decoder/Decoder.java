@@ -1,6 +1,11 @@
 /*
- * 11/19/04		1.0 moved to LGPL.
- * 01/12/99		Initial version.	mdm@techie.com
+ * 11/19/04 : 1.0 moved to LGPL.
+ * 
+ * 02/12/99 : Java Conversion by E.B , javalayer@javazoom.net
+ *
+ *  @(#) crc.h 1.5, last edit: 6/15/94 16:55:32
+ *  @(#) Copyright (C) 1993, 1994 Tobias Bading (bading@cs.tu-berlin.de)
+ *  @(#) Berlin University of Technology
  *-----------------------------------------------------------------------
  *   This program is free software; you can redistribute it and/or modify
  *   it under the terms of the GNU Library General Public License as published
@@ -16,9 +21,9 @@
  *   License along with this program; if not, write to the Free Software
  *   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  *----------------------------------------------------------------------
- */
- 
+ */ 
 package javazoom.jl.decoder;
+
 
 /**
  * The <code>Decoder</code> class encapsulates the details of
