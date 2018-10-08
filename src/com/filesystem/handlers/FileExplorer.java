@@ -200,34 +200,36 @@ public final class FileExplorer {
 					}
 				}
 				while (lyricString.contains("&apos;")) {
-					if (lyricString.charAt(lyricString.indexOf('&') + 5) == ';') {
-						if (lyricString.charAt(lyricString.indexOf('&') + 2) == 'p') {
-							if (lyricString.indexOf(';') == lyricString
+					if (lyricString.charAt(lyricString.lastIndexOf('&') + 5) == ';') {
+						if (lyricString
+								.charAt(lyricString.lastIndexOf('&') + 2) == 'p') {
+							if (lyricString.lastIndexOf(';') == lyricString
 									.length() - 1) {
 								lyricString = lyricString.substring(0,
-										lyricString.indexOf('&')) + "'";
+										lyricString.lastIndexOf('&')) + "'";
 							} else
 								lyricString = lyricString.substring(0,
-										lyricString.indexOf('&'))
+										lyricString.lastIndexOf('&'))
 										+ "'"
 										+ lyricString.substring(lyricString
-												.indexOf(';') + 1);
+												.lastIndexOf(';') + 1);
 						}
 					}
 				}
 				while (lyricString.contains("&quot;")) {
-					if (lyricString.charAt(lyricString.indexOf('&') + 5) == ';') {
-						if (lyricString.charAt(lyricString.indexOf('&') + 2) == 'u') {
-							if (lyricString.indexOf(';') == lyricString
+					if (lyricString.charAt(lyricString.lastIndexOf('&') + 5) == ';') {
+						if (lyricString
+								.charAt(lyricString.lastIndexOf('&') + 2) == 'u') {
+							if (lyricString.lastIndexOf(';') == lyricString
 									.length() - 1) {
 								lyricString = lyricString.substring(0,
-										lyricString.indexOf('&')) + "\"";
+										lyricString.lastIndexOf('&')) + "\"";
 							} else
 								lyricString = lyricString.substring(0,
-										lyricString.indexOf('&'))
+										lyricString.lastIndexOf('&'))
 										+ "\""
 										+ lyricString.substring(lyricString
-												.indexOf(';') + 1);
+												.lastIndexOf(';') + 1);
 						}
 					}
 				}
