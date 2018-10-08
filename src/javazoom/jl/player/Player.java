@@ -322,8 +322,6 @@ public class Player {
 			h = bitstream.readFrame();
 
 			if (h == null) {
-				Logger.getGlobal()
-						.log(Level.WARNING, "No more frames to read!");
 				bitstream.close();
 				bitstream = null;
 				Logger.getGlobal().log(Level.WARNING, "mp3 stream has closed!");
@@ -405,6 +403,10 @@ public class Player {
 				SourceDataLine.class, format));
 		line.open(format);
 		line.start();
+	}
+
+	public void closeBitStream() {
+		bitstream.closeFrame();
 	}
 
 }

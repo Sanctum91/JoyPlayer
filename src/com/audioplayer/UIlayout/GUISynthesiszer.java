@@ -1151,8 +1151,7 @@ public final class GUISynthesiszer extends JFrame implements MouseListener,
 									"Failed to create an instance for current null instance of mp3 invoker. ");
 						Thread.sleep(300);
 						if (mp3Invoker.decodeFrameHeader()) {
-							mp3Duration = mp3Invoker
-									.getTotoalDuration(songToPlay);
+							mp3Duration = mp3Invoker.getTotoalDuration();
 							clipStartTime = mp3Invoker.getPosition();
 							logger.log(Level.INFO,
 									"mp3 SourceDataLine initialized successfully.");
@@ -1171,8 +1170,7 @@ public final class GUISynthesiszer extends JFrame implements MouseListener,
 						}
 						logger.log(Level.INFO, "Initialize mp3 SourceDataLine.");
 						if (mp3Invoker.decodeFrameHeader()) {
-							mp3Duration = mp3Invoker
-									.getTotoalDuration(songToPlay);
+							mp3Duration = mp3Invoker.getTotoalDuration();
 							clipStartTime = mp3Invoker.getPosition();
 							logger.log(Level.INFO,
 									"mp3 SourceDataLine initialized successfully.");
@@ -1354,15 +1352,13 @@ public final class GUISynthesiszer extends JFrame implements MouseListener,
 						}
 						if (mp3Invoker != null) {
 							if (request >= 0) {
-								currentTimeInMicros = Math
-										.round(mp3Invoker
-												.readNextDecodebaleFrame(request) * 1e3) - 50;
-								clipStartTime = -currentTimeInMicros;
+								clipStartTime = mp3Invoker.getPosition()
+										- Math.round(mp3Invoker
+												.readNextDecodebaleFrame(request) * 1e3);
 								request = -1.0;
-							} else {
-								currentTimeInMicros = mp3Invoker.getPosition()
-										- clipStartTime;
 							}
+							currentTimeInMicros = mp3Invoker.getPosition()
+									- clipStartTime;
 							if (!mp3Invoker.play()) {
 								if (!keepStreaming) {
 									keepStreaming = !keepStreaming;

@@ -36,10 +36,8 @@ import javax.sound.sampled.UnsupportedAudioFileException;
 import javax.swing.JOptionPane;
 
 import javazoom.jl.decoder.BitstreamException;
-import javazoom.jl.decoder.DecoderException;
 import javazoom.jl.decoder.Header;
 import javazoom.jl.decoder.JavaLayerException;
-import javazoom.jl.decoder.SampleBuffer;
 
 /**
  * The <code>MP3Codec</code> class implements a simple command-line player for
@@ -49,19 +47,12 @@ import javazoom.jl.decoder.SampleBuffer;
  */
 public class MP3Codec {
 
-	private static final int samplesForLayerI = 384;
-	private static final int samplesForLayerIII = 1152;
-
 	private boolean remote = false;
 	private static MP3Codec mp3Codec = null;
 	private Player player = null;
 	private RandomAccessFile accessor = null;
 	private BufferedInputStream in;
 	private Header header = null;
-	private int samplesPerFrame;
-	private int totalFrames;
-	private byte[] samples;
-	private SampleBuffer buffer;
 
 	/**
 	 * Create An instance of MP3 in singleton pattern.
@@ -147,16 +138,18 @@ public class MP3Codec {
 	}
 
 	/**
-	 * Get total duration of current audio data if song path exists.
+	 * Get total duration of current audio data if song path exists, measured in
+	 * milliseconds.
 	 * 
 	 * @param songPath
 	 * @return the total duration
 	 * @throws IOException
 	 * @throws UnsupportedAudioFileException
 	 */
-	public float getTotoalDuration(Path filePath) throws IOException {
-		return mp3Codec.player.getTotalDuration((int) mp3Codec.accessor
-				.length());
+	public float getTotoalDuration() throws IOException {
+		mp3Codec.getHeader();
+		return (float) (1e3 * mp3Codec.accessor.length() / (mp3Codec.header
+				.bitrate() / 8));
 	}
 
 	/**
@@ -275,26 +268,11 @@ public class MP3Codec {
 	 */
 	private void getHeader() throws IOException {
 		mp3Codec.header = mp3Codec.player.getHeader();
-		mp3Codec.samplesPerFrame = header.layer() == 1 ? samplesForLayerI
-				: samplesForLayerIII;
-		mp3Codec.totalFrames = mp3Codec.header
-				.max_number_of_frames((int) mp3Codec.accessor.length());
 	}
 
 	/**
-	 * Initialize bitStream with Player's BitStream instance.
-	 * 
-	 * @return
-	 * @throws BitstreamException
-	 * @throws DecoderException
-	 */
-	private SampleBuffer getSampleBuffer() throws DecoderException,
-			BitstreamException {
-		return mp3Codec.player.getSampleBuffer();
-	}
-
-	/**
-	 * Seek to the requested position and return the approximate audio position
+	 * Seek to the requested position and return the approximate audio position,
+	 * measured in milliseconds.
 	 * 
 	 * @param request
 	 * @return
@@ -304,56 +282,17 @@ public class MP3Codec {
 	 */
 	public double readNextDecodebaleFrame(double request) throws IOException,
 			JavaLayerException, LineUnavailableException {
-		mp3Codec.player.getSourceDataLine().close();
 		if (mp3Codec == null) {
 			return 0;
 		}
 		mp3Codec.getHeader();
-
-		long samplePos = Math.round(request * mp3Codec.samplesPerFrame
-				* mp3Codec.totalFrames);
-		// Get number of frames ahead of the request position
-		int numOfFramesAhead = (int) (mp3Codec.totalFrames * request);
-		int remainderSamples = (int) (samplePos - numOfFramesAhead
-				* mp3Codec.samplesPerFrame);
-		numOfFramesAhead += remainderSamples / mp3Codec.samplesPerFrame;
-		remainderSamples = remainderSamples % mp3Codec.samplesPerFrame;
-		double result = (remainderSamples == 0 ? 1e0 * numOfFramesAhead : 1e0
-				* remainderSamples / mp3Codec.header.calculate_framesize()
-				+ numOfFramesAhead)
-				* mp3Codec.samplesPerFrame
-				/ (mp3Codec.header.frequency() * 1e-3);
-
-		mp3Codec.seekTo(numOfFramesAhead
-				* mp3Codec.header.calculate_framesize());
-		if (remainderSamples > 0) {
-			mp3Codec.buffer = mp3Codec.getSampleBuffer();
-			if (mp3Codec.buffer != null) {
-				mp3Codec.samples = mp3Codec.player
-						.getJavaSoundAudioDevice()
-						.toByteArray(
-								buffer.getBuffer(),
-								remainderSamples,
-								(buffer.getBufferLength() - remainderSamples) % 2 == 0 ? (buffer
-										.getBufferLength() - remainderSamples)
-										: (buffer.getBufferLength()
-												- remainderSamples - 1));
-				mp3Codec.player.getSourceDataLine().write(samples, 0,
-						samples.length);
-				synchronized (mp3Codec) {
-					mp3Codec.notify();
-					mp3Codec.player.getSourceDataLine().close();
-					mp3Codec.player.getSourceDataLine().open();
-					mp3Codec.player.getSourceDataLine().start();
-				}
-			}
-		} else {
-			synchronized (mp3Codec) {
-				mp3Codec.notify();
-				mp3Codec.player.getSourceDataLine().open();
-				mp3Codec.player.getSourceDataLine().start();
-			}
-		}
-		return result;
+		long filePos = Math.round(mp3Codec.header.bitrate() / 8 * request
+				* mp3Codec.getTotoalDuration() / 1e3);
+		mp3Codec.seekTo(filePos);
+		mp3Codec.player.closeBitStream();
+		Player.decodeFrame();
+		return mp3Codec.accessor.getFilePointer() * 1e3
+				/ (mp3Codec.header.bitrate() / 8)
+				- mp3Codec.header.ms_per_frame() * 5;
 	}
 }
