@@ -248,7 +248,7 @@ public final class GUISynthesiszer extends JFrame implements MouseListener,
 				if (!fileIsNotReady) {
 					fileIsNotReady = !fileIsNotReady;
 				}
-				System.out.println("Clients may duplicate!");
+				logger.log(Level.WARNING, "Application is not ready!");
 			}
 			if (!songsHavePlayed.contains(songToPlay))
 				songsHavePlayed.add(songToPlay);
@@ -745,9 +745,12 @@ public final class GUISynthesiszer extends JFrame implements MouseListener,
 						playNextSong = !playNextSong;
 					}
 					if (songsHavePlayed.indexOf(lastPlayed) == (songsHavePlayed
-							.size() - 1))
+							.size() - 1)) {
 						songToPlay = FileExplorer.songMenu(songsHavePlayed);
-					else
+						if (songToPlay == null) {
+							songToPlay = songsHavePlayed.get(0);
+						}
+					} else
 						songToPlay = songsHavePlayed.get(songsHavePlayed
 								.indexOf(lastPlayed) + 1);
 					postConditionHandler();
@@ -815,9 +818,10 @@ public final class GUISynthesiszer extends JFrame implements MouseListener,
 							}
 							mp3Invoker = null;
 						}
-						slider.setValue(slider.getMinimum());
 						lock.notify();
 					}
+					Thread.sleep(300);
+					slider.setValue(slider.getMinimum());
 					slider.setEnabled(false);
 					lyricsLabelPre.setText(quotes[0]);
 					lyricsLabelMid.setText(quotes[0]);
@@ -886,23 +890,14 @@ public final class GUISynthesiszer extends JFrame implements MouseListener,
 							keepStreaming = !keepStreaming;
 							Thread.sleep(100);
 						}
+						logger.log(Level.INFO, "Set mp3 invoker to null.");
+						mp3Invoker = null;
 					}
 					lastPlayed = songToPlay;
 				} else {
 					logger.log(Level.INFO,
 							"New song path is invalid, use most recently played one instead.");
 					songToPlay = lastPlayed;
-					if (songToPlay.toString().endsWith(flacExt)) {
-						logger.log(Level.INFO,
-								"Creating new streaming instance for flac file.");
-						FLACCodec.createInstance(songToPlay);
-					} else if (songToPlay.toString().endsWith(mp3Ext)) {
-						logger.log(Level.INFO, "Switch mp3 streaming on.");
-						while (!keepStreaming) {
-							keepStreaming = !keepStreaming;
-							Thread.sleep(200);
-						}
-					}
 					if (!stopPlaying) {
 						stopPlaying = !stopPlaying;
 					}
@@ -912,8 +907,7 @@ public final class GUISynthesiszer extends JFrame implements MouseListener,
 					new requestHandler("stopPlaying");
 					return;
 				}
-				logger.log(Level.INFO, "Set mp3 invoker to null.");
-				mp3Invoker = null;
+
 				if (!songsHavePlayed.contains(songToPlay)) {
 					logger.log(Level.INFO,
 							"Add new song path to songsHavePlayed.");
@@ -1370,7 +1364,6 @@ public final class GUISynthesiszer extends JFrame implements MouseListener,
 										- clipStartTime;
 							}
 							if (!mp3Invoker.play()) {
-								Thread.sleep(300);
 								if (!keepStreaming) {
 									keepStreaming = !keepStreaming;
 								}
@@ -1379,7 +1372,7 @@ public final class GUISynthesiszer extends JFrame implements MouseListener,
 									// stopPlaying = true;
 									// new requestHandler("stopPlaying");
 									playNextSong = true;
-									Thread.sleep(1000);
+									Thread.sleep(700);
 									new requestHandler("playNextSong");
 								}
 								break;
@@ -1830,6 +1823,10 @@ public final class GUISynthesiszer extends JFrame implements MouseListener,
 			// e.printStackTrace();
 			// }
 			// }
+			lyricsLabelPre.setText(quotes[0]);
+			lyricsLabelMid.setText(quotes[0]);
+			lyricsLabelNext.setText(quotes[0]);
+			synthesiszer.setTitle(quotes[0]);
 			playButton.setIcon(startIcon);
 			slider.setValue(slider.getMinimum());
 			timeLabel.setText(alignment + timeLabelInit);

@@ -27,7 +27,7 @@ import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
-import java.util.Iterator;
+import java.util.LinkedList;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -42,14 +42,12 @@ public final class FileExplorer {
 	private static final String flacExt = ".flac";
 	private static final String mp3Ext = ".mp3";
 	private static final String lrcExt = ".lrc";
-	private ArrayList<Path> songList;
-	private ArrayList<Path> FLACsongList;
-	private ArrayList<Path> mp3songList;
-	private ArrayList<Path> folderList;
-	private ArrayList<Path> lyricsList;
+	private Path[] songList;
+	private LinkedList<Path> FLACsongList;
+	private LinkedList<Path> mp3songList;
+	private LinkedList<Path> folderList;
+	private LinkedList<Path> lyricsList;
 	private Path specifiedPath;
-	private Path songToPlay;
-	private int songIdx = 0;
 	private JFileChooser fileChooser;
 	private boolean alreadyStartOneApp;
 
@@ -66,7 +64,6 @@ public final class FileExplorer {
 		// "plays the FLAC audio file".
 		EXPLORER.alreadyStartOneApp = false;
 		Process process = null;
-		EXPLORER.songToPlay = null;
 		try {
 			process = Runtime.getRuntime().exec("jps");
 			BufferedReader br = new BufferedReader(new InputStreamReader(
@@ -87,10 +84,10 @@ public final class FileExplorer {
 			String fileSourceName = sourceFile.toAbsolutePath().toString();
 			fileSourceName = fileSourceName.substring(fileSourceName
 					.lastIndexOf(File.separator) + 1);
-			System.out.println(mainClassName);
-			System.out.println(fileSourceName);
+			Logger.getGlobal().log(Level.FINE,
+					"main class name: " + mainClassName);
+			Logger.getGlobal().log(Level.FINE, fileSourceName);
 			while ((p = br.readLine()) != null) {
-				System.out.println(p);
 				if (p.endsWith(" " + mainClassName)
 						|| p.endsWith(" " + fileSourceName)) {
 					count++;
@@ -103,11 +100,11 @@ public final class FileExplorer {
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
-		EXPLORER.songList = new ArrayList<>();
-		EXPLORER.FLACsongList = new ArrayList<>();
-		EXPLORER.mp3songList = new ArrayList<>();
-		EXPLORER.folderList = new ArrayList<>();
-		EXPLORER.lyricsList = new ArrayList<>();
+		EXPLORER.songList = null;
+		EXPLORER.FLACsongList = new LinkedList<>();
+		EXPLORER.mp3songList = new LinkedList<>();
+		EXPLORER.folderList = new LinkedList<>();
+		EXPLORER.lyricsList = new LinkedList<>();
 		specifiedPath = null;
 		if (!alreadyStartOneApp) {
 			fileChooser = new JFileChooser();
@@ -128,12 +125,10 @@ public final class FileExplorer {
 						EXPLORER.mp3songList, EXPLORER.folderList, mp3Ext);
 				FileHandler.recursiveDirectoryHandler(specifiedPath,
 						EXPLORER.lyricsList, EXPLORER.folderList, lrcExt);
-				for (Path path : EXPLORER.FLACsongList) {
-					songList.add(path);
-				}
-				for (Path path : EXPLORER.mp3songList) {
-					songList.add(path);
-				}
+				EXPLORER.FLACsongList.addAll(EXPLORER.mp3songList);
+				EXPLORER.songList = new Path[EXPLORER.FLACsongList.size()];
+				EXPLORER.FLACsongList.toArray(EXPLORER.songList);
+				Arrays.sort(songList);
 			}
 		}
 		// parsing files and directories under specified path
@@ -306,40 +301,28 @@ public final class FileExplorer {
 		}
 		switch (fileExtension) {
 		case flacExt:
-			for (Path path : EXPLORER.FLACsongList) {
-				if (EXPLORER.songList.contains(path)) {
-					EXPLORER.songList.remove(path);
-				}
-			}
 			if (!EXPLORER.FLACsongList.isEmpty())
 				EXPLORER.FLACsongList.clear();
 			if (!EXPLORER.folderList.isEmpty())
 				EXPLORER.folderList.clear();
 			FileHandler.recursiveDirectoryHandler(EXPLORER.specifiedPath,
 					EXPLORER.FLACsongList, EXPLORER.folderList, fileExtension);
-			for (Path path : EXPLORER.FLACsongList) {
-				if (!EXPLORER.songList.contains(path)) {
-					EXPLORER.songList.add(path);
-				}
-			}
+			EXPLORER.FLACsongList.addAll(EXPLORER.mp3songList);
+			EXPLORER.songList = new Path[EXPLORER.FLACsongList.size()];
+			EXPLORER.FLACsongList.toArray(EXPLORER.songList);
+			Arrays.sort(EXPLORER.songList);
 			break;
 		case mp3Ext:
-			for (Path path : EXPLORER.mp3songList) {
-				if (EXPLORER.songList.contains(path)) {
-					EXPLORER.songList.remove(path);
-				}
-			}
 			if (!EXPLORER.mp3songList.isEmpty())
 				EXPLORER.mp3songList.clear();
 			if (!EXPLORER.folderList.isEmpty())
 				EXPLORER.folderList.clear();
 			FileHandler.recursiveDirectoryHandler(EXPLORER.specifiedPath,
 					EXPLORER.mp3songList, EXPLORER.folderList, fileExtension);
-			for (Path path : EXPLORER.mp3songList) {
-				if (!EXPLORER.songList.contains(path)) {
-					EXPLORER.songList.add(path);
-				}
-			}
+			EXPLORER.FLACsongList.addAll(EXPLORER.mp3songList);
+			EXPLORER.songList = new Path[EXPLORER.FLACsongList.size()];
+			EXPLORER.FLACsongList.toArray(EXPLORER.songList);
+			Arrays.sort(EXPLORER.songList);
 			break;
 		case lrcExt:
 			if (!EXPLORER.lyricsList.isEmpty())
@@ -411,17 +394,12 @@ public final class FileExplorer {
 		if (EXPLORER.specifiedPath == null) {
 			return null;
 		}
-		Path res = null;
-		for (Iterator<Path> iterator = EXPLORER.songList.iterator(); iterator
-				.hasNext();) {
-			Path song = iterator.next();
-			if (song.getFileName().toString().toLowerCase()
-					.contains(response.toLowerCase())) {
-				res = song;
-				return res;
+		for (Path path : EXPLORER.songList) {
+			if (path.toString().toUpperCase().contains(response.toUpperCase())) {
+				return path;
 			}
 		}
-		return res;
+		return null;
 	}
 
 	/**
@@ -435,14 +413,10 @@ public final class FileExplorer {
 		if (EXPLORER.specifiedPath == null) {
 			return null;
 		}
-		if (EXPLORER.songIdx < EXPLORER.songList.size()) {
-			do {
-				EXPLORER.songToPlay = EXPLORER.songList.get((int) (Math
-						.random() * EXPLORER.songList.size()));
-			} while (songsHavePicked.contains(EXPLORER.songToPlay));
-			if (!songsHavePicked.contains(EXPLORER.songToPlay))
-				EXPLORER.songIdx++;
-			return EXPLORER.songToPlay;
+		for (Path path : EXPLORER.songList) {
+			if (!songsHavePicked.contains(path)) {
+				return path;
+			}
 		}
 		return null;
 	}

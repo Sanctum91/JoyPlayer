@@ -42,8 +42,8 @@ import javazoom.jl.decoder.JavaLayerException;
 import javazoom.jl.decoder.SampleBuffer;
 
 /**
- * The <code>MP3Codec</code> class implements a simple command-line player for MPEG
- * audio files.
+ * The <code>MP3Codec</code> class implements a simple command-line player for
+ * MPEG audio files.
  *
  * @author Mat McGowan (mdm@techie.com)
  */
@@ -318,8 +318,9 @@ public class MP3Codec {
 				* mp3Codec.samplesPerFrame);
 		numOfFramesAhead += remainderSamples / mp3Codec.samplesPerFrame;
 		remainderSamples = remainderSamples % mp3Codec.samplesPerFrame;
-		double result = (remainderSamples == 0 ? numOfFramesAhead
-				: ++numOfFramesAhead)
+		double result = (remainderSamples == 0 ? 1e0 * numOfFramesAhead : 1e0
+				* remainderSamples / mp3Codec.header.calculate_framesize()
+				+ numOfFramesAhead)
 				* mp3Codec.samplesPerFrame
 				/ (mp3Codec.header.frequency() * 1e-3);
 

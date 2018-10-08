@@ -19,7 +19,7 @@ import java.io.IOException;
 import java.nio.file.DirectoryStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.ArrayList;
+import java.util.LinkedList;
 
 public final class FileHandler {
 
@@ -37,7 +37,7 @@ public final class FileHandler {
 	 * @throws IOException
 	 */
 	public static void recursiveDirectoryHandler(Path pathName,
-			ArrayList<Path> fileList, ArrayList<Path> folderList,
+			LinkedList<Path> fileList, LinkedList<Path> folderList,
 			String fileExtension) {
 		DirectoryStream<Path> stream;
 		if (pathName == null) {
@@ -69,7 +69,7 @@ public final class FileHandler {
 
 	// This method is used for processing pure files only, not for
 	// directory.
-	public static boolean fileHander(Path entry, ArrayList<Path> files,
+	public static boolean fileHander(Path entry, LinkedList<Path> files,
 			String fileExtension) {
 		// String processedFullName = delimiterCanceller(file);
 		boolean canHandleWithFileHandler = false;
