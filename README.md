@@ -11,7 +11,7 @@
 
 # <h2> Features:
 - [x] Upon starting, simply choose your audio library folder that contains any FLAC or mp3 audio, and the rest job is the player's.
-- [x] Decode and play FLAC, mp3 audio data with shuffle on by default.
+- [x] Decode and play FLAC, mp3 audio data with shuffle off by default.
 - [x] Allow lyrics to show on the label simultanenously while playing audio data, note that the LRC file name should be the same as that of the corresponding audio, and they should be in the same directory.
 - [x] While playing, you can navigate to any location you like throughout the audio length simply by clicking any location on the horizontal slider. Any the lyrics may still remain synchronous for FLAC audio, lyrics synchronization for mp3 after using slider may need to be refined.
 - [x] By clicking the panda image on the upper left corner of the player, type in the song name that may exist in your local audio library and the player would find it out if it exists, and you can decide to play or not.
