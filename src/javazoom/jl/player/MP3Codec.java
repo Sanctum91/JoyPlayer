@@ -77,7 +77,7 @@ public class MP3Codec {
 	 */
 
 	public long getPosition() {
-		return mp3Codec.player.getCurrentPosition();
+		return Player.getCurrentPosition();
 	}
 
 	/**
@@ -97,7 +97,7 @@ public class MP3Codec {
 	 */
 
 	public void closeStreaming() throws BitstreamException {
-		mp3Codec.player.closeStreaming();
+		Player.closeStreaming();
 	}
 
 	/**
@@ -267,7 +267,7 @@ public class MP3Codec {
 	 * @throws IOException
 	 */
 	private void getHeader() throws IOException {
-		mp3Codec.header = mp3Codec.player.getHeader();
+		mp3Codec.header = Player.getHeader();
 	}
 
 	/**
@@ -289,7 +289,7 @@ public class MP3Codec {
 		long filePos = Math.round(mp3Codec.header.bitrate() / 8 * request
 				* mp3Codec.getTotoalDuration() / 1e3);
 		mp3Codec.seekTo(filePos);
-		mp3Codec.player.closeBitStream();
+		Player.closeBitStream();
 		Player.decodeFrame();
 		return mp3Codec.accessor.getFilePointer() * 1e3
 				/ (mp3Codec.header.bitrate() / 8)

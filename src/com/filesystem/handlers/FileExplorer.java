@@ -119,11 +119,11 @@ public final class FileExplorer {
 				// specified path.
 				specifiedPath = Paths.get(fileChooser.getSelectedFile()
 						.getAbsolutePath());
-				FileHandler.recursiveDirectoryHandler(specifiedPath,
+				FileAndDirectory.recursiveDirectoryHandler(specifiedPath,
 						EXPLORER.FLACsongList, EXPLORER.folderList, flacExt);
-				FileHandler.recursiveDirectoryHandler(specifiedPath,
+				FileAndDirectory.recursiveDirectoryHandler(specifiedPath,
 						EXPLORER.mp3songList, EXPLORER.folderList, mp3Ext);
-				FileHandler.recursiveDirectoryHandler(specifiedPath,
+				FileAndDirectory.recursiveDirectoryHandler(specifiedPath,
 						EXPLORER.lyricsList, EXPLORER.folderList, lrcExt);
 				EXPLORER.FLACsongList.addAll(EXPLORER.mp3songList);
 				EXPLORER.songList = new Path[EXPLORER.FLACsongList.size()];
@@ -187,18 +187,6 @@ public final class FileExplorer {
 				float pennySec = (float) (min * 60 + s + penny * 0.01f);
 				String lyricString = content
 						.substring(content.indexOf(']') + 1);
-				if (lyricString.contains(" ")) {
-					int len = lyricString.length();
-					while (len > 0) {
-						if (lyricString.charAt(len - 1) != ' ') {
-							break;
-						}
-						len--;
-					}
-					if (len == 0) {
-						lyricString = "*music*";
-					}
-				}
 				while (lyricString.contains("&apos;")) {
 					if (lyricString.charAt(lyricString.lastIndexOf('&') + 5) == ';') {
 						if (lyricString
@@ -307,7 +295,7 @@ public final class FileExplorer {
 				EXPLORER.FLACsongList.clear();
 			if (!EXPLORER.folderList.isEmpty())
 				EXPLORER.folderList.clear();
-			FileHandler.recursiveDirectoryHandler(EXPLORER.specifiedPath,
+			FileAndDirectory.recursiveDirectoryHandler(EXPLORER.specifiedPath,
 					EXPLORER.FLACsongList, EXPLORER.folderList, fileExtension);
 			EXPLORER.FLACsongList.addAll(EXPLORER.mp3songList);
 			EXPLORER.songList = new Path[EXPLORER.FLACsongList.size()];
@@ -319,7 +307,7 @@ public final class FileExplorer {
 				EXPLORER.mp3songList.clear();
 			if (!EXPLORER.folderList.isEmpty())
 				EXPLORER.folderList.clear();
-			FileHandler.recursiveDirectoryHandler(EXPLORER.specifiedPath,
+			FileAndDirectory.recursiveDirectoryHandler(EXPLORER.specifiedPath,
 					EXPLORER.mp3songList, EXPLORER.folderList, fileExtension);
 			EXPLORER.FLACsongList.addAll(EXPLORER.mp3songList);
 			EXPLORER.songList = new Path[EXPLORER.FLACsongList.size()];
@@ -331,7 +319,7 @@ public final class FileExplorer {
 				EXPLORER.lyricsList.clear();
 			if (!EXPLORER.folderList.isEmpty())
 				EXPLORER.folderList.clear();
-			FileHandler.recursiveDirectoryHandler(EXPLORER.specifiedPath,
+			FileAndDirectory.recursiveDirectoryHandler(EXPLORER.specifiedPath,
 					EXPLORER.lyricsList, EXPLORER.folderList, lrcExt);
 			break;
 		default:

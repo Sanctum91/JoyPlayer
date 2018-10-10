@@ -76,7 +76,7 @@ public class Player {
 	 */
 	private boolean complete = false;
 
-	private long lastPosition = 0;
+	private static long lastPosition = 0;
 
 	private static Header h = null;
 
@@ -226,7 +226,7 @@ public class Player {
 	 * 
 	 * @return
 	 */
-	public long getCurrentPosition() {
+	public static long getCurrentPosition() {
 		lastPosition = 0;
 		if (line != null) {
 			lastPosition = line.getMicrosecondPosition();
@@ -239,7 +239,7 @@ public class Player {
 	 * 
 	 * @throws BitstreamException
 	 */
-	public void closeStreaming() throws BitstreamException {
+	public static void closeStreaming() throws BitstreamException {
 		if (line != null) {
 			line.close();
 			line = null;
@@ -306,7 +306,7 @@ public class Player {
 	 * 
 	 * @return Header instance.
 	 */
-	protected Header getHeader() {
+	protected static Header getHeader() {
 		return h;
 	}
 
@@ -405,7 +405,7 @@ public class Player {
 		line.start();
 	}
 
-	public void closeBitStream() {
+	public static void closeBitStream() {
 		bitstream.closeFrame();
 	}
 
