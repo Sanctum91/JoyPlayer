@@ -630,6 +630,9 @@ public final class GUISynthesiszer extends JFrame implements MouseListener,
 							if (reply == JOptionPane.YES_OPTION) {
 								songToPlay = searchRes.toAbsolutePath();
 								lastPlayed = songToPlay;
+								if (!isPlaying) {
+									isPlaying = !isPlaying;
+								}
 								if (!stopPlaying) {
 									stopPlaying = !stopPlaying;
 									new requestHandler("stopPlaying");
