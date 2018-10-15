@@ -1356,6 +1356,10 @@ public final class GUISynthesiszer extends JFrame implements MouseListener,
 										- Math.round(mp3Invoker
 												.readNextDecodebaleFrame(request) * 1e3);
 								request = -1.0;
+								if (!playButton.getIcon().equals(pauseIcon)) {
+									Thread.sleep(250);
+									playButton.setIcon(pauseIcon);
+								}
 							}
 							currentTimeInMicros = mp3Invoker.getPosition()
 									- clipStartTime;
