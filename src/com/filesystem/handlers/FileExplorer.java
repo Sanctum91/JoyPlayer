@@ -38,7 +38,6 @@ import com.audioplayer.UIlayout.GUISynthesiszer;
 
 public final class FileExplorer {
 	private static final FileExplorer EXPLORER = new FileExplorer();
-	private static final Object lock = new Object();
 	private static final String flacExt = ".flac";
 	private static final String mp3Ext = ".mp3";
 	private static final String lrcExt = ".lrc";
@@ -107,10 +106,10 @@ public final class FileExplorer {
 		EXPLORER.lyricsList = new LinkedList<>();
 		specifiedPath = null;
 		if (!alreadyStartOneApp) {
-			fileChooser = new JFileChooser();
-			fileChooser.setDialogTitle("Please choose a FLAC directory");
-			synchronized (lock) {
-				lock.notify();
+			synchronized (this) {
+				fileChooser = new JFileChooser();
+				fileChooser.setDialogTitle("Please choose a FLAC directory");
+				this.notify();
 				fileChooser.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
 			}
 			int response = fileChooser.showOpenDialog(null);
@@ -162,15 +161,15 @@ public final class FileExplorer {
 				if (content.contains("//")) {
 					break;
 				}
-				if (content.length() < 11 || content.charAt(6) != '.'
-						|| content.contains("著作权")) {
-					continue;
-				}
 				if (content.charAt(1) < '0' || content.charAt(1) > '9') {
 					continue;
 				}
 				if (content.charAt(9) >= '0' && content.charAt(9) <= '9') {
 					content = content.substring(0, 9) + content.substring(10);
+				}
+				if (content.length() < 11 || content.charAt(6) != '.'
+						|| content.contains("著作权")) {
+					continue;
 				}
 				String minString = content.substring(
 						(content.indexOf('[') + 1), content.indexOf(':'));
@@ -244,11 +243,13 @@ public final class FileExplorer {
 						Float fnext = differ * 0.5f + f;
 						String str = strValues.get(fKeys.indexOf(f));
 						int idx = (int) ((str.length() - 1) * 0.5);
-						while (idx > 0) {
-							if (str.charAt(idx) != ' ') {
-								idx--;
-							} else {
-								break;
+						if (str.contains(" ")) {
+							while (idx > 0) {
+								if (str.charAt(idx) != ' ') {
+									idx--;
+								} else {
+									break;
+								}
 							}
 						}
 						lyrics.put(f, str.substring(0, idx));

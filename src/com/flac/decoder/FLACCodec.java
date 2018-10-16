@@ -269,6 +269,7 @@ public final class FLACCodec {
 	// Close byte stream
 	private void close() throws IOException {
 		input.close();
+		input = null;
 	}
 
 	/**

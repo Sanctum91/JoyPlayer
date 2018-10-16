@@ -137,7 +137,6 @@ public final class GUISynthesiszer extends JFrame implements MouseListener,
 	private boolean filesNotBeenInitialized = true;
 	private static boolean wayPlaying = false;
 	private boolean fileIsNotReady = false;
-	private Boolean keepStreaming = true;
 
 	/**
 	 * Create double field for signaling a request ranging from 0 to 1.
@@ -806,11 +805,6 @@ public final class GUISynthesiszer extends JFrame implements MouseListener,
 						if (songToPlay.toString().endsWith(flacExt)) {
 							FLACCodec.closeFile();
 						} else if (songToPlay.toString().endsWith(mp3Ext)) {
-							if (keepStreaming) {
-								keepStreaming = !keepStreaming;
-								Thread.sleep(350);
-								keepStreaming = !keepStreaming;
-							}
 							// mp3Invoker.closeStreaming();
 							if (isPlaying) {
 								playButton.setIcon(startIcon);
@@ -864,9 +858,6 @@ public final class GUISynthesiszer extends JFrame implements MouseListener,
 					FLACCodec.closeFile();
 				} else if (songToPlay.toString().endsWith(mp3Ext)) {
 					logger.log(Level.INFO, "Blocking current mp3 streaming");
-					while (keepStreaming) {
-						keepStreaming = !keepStreaming;
-					}
 					if (mp3Invoker != null) {
 						mp3Invoker.closeStreaming();
 					}
@@ -887,12 +878,6 @@ public final class GUISynthesiszer extends JFrame implements MouseListener,
 								"Creating new streaming for flac file.");
 						FLACCodec.createInstance(songToPlay);
 					} else if (songToPlay.toString().endsWith(mp3Ext)) {
-						logger.log(Level.INFO, "Switch mp3 streaming on.");
-						while (!keepStreaming) {
-							Thread.sleep(100);
-							keepStreaming = !keepStreaming;
-							Thread.sleep(100);
-						}
 						logger.log(Level.INFO, "Set mp3 invoker to null.");
 						mp3Invoker = null;
 					}
@@ -1152,7 +1137,7 @@ public final class GUISynthesiszer extends JFrame implements MouseListener,
 						else
 							logger.log(Level.WARNING,
 									"Failed to create an instance for current null instance of mp3 invoker. ");
-						Thread.sleep(300);
+						Thread.sleep(10);
 						if (mp3Invoker.decodeFrameHeader()) {
 							mp3Duration = mp3Invoker.getTotoalDuration();
 							clipStartTime = mp3Invoker.getPosition();
@@ -1367,17 +1352,10 @@ public final class GUISynthesiszer extends JFrame implements MouseListener,
 							currentTimeInMicros = mp3Invoker.getPosition()
 									- clipStartTime;
 							if (!mp3Invoker.play()) {
-								if (!keepStreaming) {
-									keepStreaming = !keepStreaming;
-								}
-								synchronized (lock) {
-									lock.notify();
-									// stopPlaying = true;
-									// new requestHandler("stopPlaying");
-									playNextSong = true;
-									Thread.sleep(700);
-									new requestHandler("playNextSong");
-								}
+								// stopPlaying = true;
+								// new requestHandler("stopPlaying");
+								playNextSong = true;
+								new requestHandler("playNextSong");
 								break;
 							}
 						} else {
