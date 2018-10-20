@@ -158,18 +158,25 @@ public final class FileExplorer {
 					Files.newInputStream(lycFilePath), "UTF-8"));
 			String content = "";
 			while ((content = reader.readLine()) != null) {
-				if (content.contains("//")) {
-					break;
+				if (content.length() < 11 || content.charAt(6) != '.') {
+					Logger.getGlobal().log(Level.INFO,
+							"skipped contents: " + content);
+					continue;
 				}
 				if (content.charAt(1) < '0' || content.charAt(1) > '9') {
+					Logger.getGlobal().log(Level.INFO,
+							"skipped contents: " + content);
 					continue;
 				}
-				if (content.charAt(9) >= '0' && content.charAt(9) <= '9') {
+				if (content.charAt(9) != ']') {
 					content = content.substring(0, 9) + content.substring(10);
+					Logger.getGlobal().log(Level.INFO,
+							"Substituted contents: " + content);
 				}
-				if (content.length() < 11 || content.charAt(6) != '.'
-						|| content.contains("Öø×÷È¨")) {
-					continue;
+				if (content.substring(10).equals("//")) {
+					Logger.getGlobal().log(Level.INFO,
+							"skipped contents: " + content);
+					break;
 				}
 				String minString = content.substring(
 						(content.indexOf('[') + 1), content.indexOf(':'));
@@ -186,39 +193,102 @@ public final class FileExplorer {
 				float pennySec = (float) (min * 60 + s + penny * 0.01f);
 				String lyricString = content
 						.substring(content.indexOf(']') + 1);
-				while (lyricString.contains("&apos;")) {
-					if (lyricString.charAt(lyricString.lastIndexOf('&') + 5) == ';') {
-						if (lyricString
-								.charAt(lyricString.lastIndexOf('&') + 2) == 'p') {
-							if (lyricString.lastIndexOf(';') == lyricString
-									.length() - 1) {
-								lyricString = lyricString.substring(0,
-										lyricString.lastIndexOf('&')) + "'";
-							} else
-								lyricString = lyricString.substring(0,
-										lyricString.lastIndexOf('&'))
-										+ "'"
-										+ lyricString.substring(lyricString
-												.lastIndexOf(';') + 1);
+				// store temporary partial result during replacing XML entities.
+				StringBuilder temp = new StringBuilder();
+				String store = lyricString;
+				// A nested loop to replace HTML entities of each line of lyrics
+				// with corresponding normal character representation.
+				Outter_Loop: while (store.contains("&apos;")
+						|| store.contains("&quot;") || store.contains("&amp;")) {
+					for (int index = 0; index < store.length(); index++) {
+						if (store.charAt(index) == '&') {
+							// break when reaching the end of the String
+							if (index + 4 > store.length() - 1) {
+								break Outter_Loop;
+							}
+							// has encountered "'"
+							if (store.charAt(index + 1) == 'a'
+									&& store.charAt(index + 4) == 's') {
+								// appear at the very head of the String
+								if (index == 0) {
+									System.out.println("1" + "&apos;" + store);
+									temp.append("'");
+									store = store.substring(6);
+								} else if (index + 5 < store.length() - 1) {
+									System.out.println("2" + "&apos;" + store);
+									temp.append(store.substring(0, index));
+									temp.append("'");
+									store = store.substring(index + 6);
+								} else {
+									System.out.println("3" + "&apos;" + store);
+									temp.append(store.substring(0,
+											store.length() - 6));
+									temp.append("'");
+									break Outter_Loop;
+								}
+								if (!store.contains("&apos;")
+										&& !store.contains("&quot;")
+										&& !store.contains("&amp;")) {
+									temp.append(store);
+									break Outter_Loop;
+								}
+								continue Outter_Loop;
+							} else if (store.charAt(index + 1) == 'q'
+									&& store.charAt(index + 4) == 't') {
+								if (index == 0) {
+									System.out.println("1" + "&quot;" + store);
+									temp.append("\"");
+									store = store.substring(6);
+								} else if (index + 5 < store.length() - 1) {
+									System.out.println("2" + "&quot;" + store);
+									temp.append(store.substring(0, index));
+									temp.append("\"");
+									store = store.substring(index + 6);
+								} else {
+									System.out.println("3" + "&quot;" + store);
+									temp.append(store.substring(0,
+											store.length() - 6));
+									temp.append("\"");
+									break Outter_Loop;
+								}
+								if (!store.contains("&apos;")
+										&& !store.contains("&quot;")
+										&& !store.contains("&amp;")) {
+									temp.append(store);
+									break Outter_Loop;
+								}
+								continue Outter_Loop;
+							} else if (store.charAt(index + 1) == 'a'
+									&& store.charAt(index + 3) == 'p') {
+								if (index == 0) {
+									System.out.println("1" + "&amp;" + store);
+									temp.append("&");
+									store = store.substring(6);
+								} else if (index + 4 < store.length() - 1) {
+									System.out.println("2" + "&amp;" + store);
+									temp.append(store.substring(0, index));
+									temp.append("&");
+									store = store.substring(index + 5);
+								} else {
+									System.out.println("3" + "&amp;" + store);
+									temp.append(store.substring(0,
+											store.length() - 5));
+									temp.append("&");
+									break Outter_Loop;
+								}
+								if (!store.contains("&apos;")
+										&& !store.contains("&quot;")
+										&& !store.contains("&amp;")) {
+									temp.append(store);
+									break Outter_Loop;
+								}
+								continue Outter_Loop;
+							}
 						}
 					}
 				}
-				while (lyricString.contains("&quot;")) {
-					if (lyricString.charAt(lyricString.lastIndexOf('&') + 5) == ';') {
-						if (lyricString
-								.charAt(lyricString.lastIndexOf('&') + 2) == 'u') {
-							if (lyricString.lastIndexOf(';') == lyricString
-									.length() - 1) {
-								lyricString = lyricString.substring(0,
-										lyricString.lastIndexOf('&')) + "\"";
-							} else
-								lyricString = lyricString.substring(0,
-										lyricString.lastIndexOf('&'))
-										+ "\""
-										+ lyricString.substring(lyricString
-												.lastIndexOf(';') + 1);
-						}
-					}
+				if (!temp.toString().equals("")) {
+					lyricString = temp.toString();
 				}
 				lyrics.put(pennySec, lyricString);
 			}

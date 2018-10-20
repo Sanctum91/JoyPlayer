@@ -55,13 +55,12 @@ import javax.swing.SwingUtilities;
 import javax.swing.plaf.basic.BasicSliderUI;
 import javax.swing.plaf.metal.MetalSliderUI;
 
-import javazoom.jl.decoder.BitstreamException;
-import javazoom.jl.decoder.JavaLayerException;
-import javazoom.jl.player.MP3Codec;
-
 import com.filesystem.handlers.FileExplorer;
 import com.flac.decoder.FLACCodec;
 import com.flac.decoder.FLACCodec.BadFileFormatException;
+import com.mp3.codec.decoder.BitstreamException;
+import com.mp3.codec.decoder.JavaLayerException;
+import com.mp3.codec.player.Accessor;
 
 public final class GUISynthesiszer extends JFrame implements MouseListener,
 		KeyListener {
@@ -111,6 +110,14 @@ public final class GUISynthesiszer extends JFrame implements MouseListener,
 	private boolean playOrPause;
 
 	/**
+	 * Create final Strings for representing different requests.
+	 */
+	private final static String next = "playNextSong";
+	private final static String previous = "playPreviousSong";
+	private final static String stop = "stopPlaying";
+	private final static String playOrNot = "playOrPause";
+
+	/**
 	 * Create JSlider field and BasicSliderUI field for JSlider UI decoration.
 	 */
 	private static JSlider slider = new JSlider(SwingConstants.HORIZONTAL, 0,
@@ -146,9 +153,9 @@ public final class GUISynthesiszer extends JFrame implements MouseListener,
 	/**
 	 * Create constant String fields for file extensions.
 	 */
-	private static final String lrcExt = ".lrc";
-	private static final String flacExt = ".flac";
-	private static final String mp3Ext = ".mp3";
+	private final static String lrcExt = ".lrc";
+	private final static String flacExt = ".flac";
+	private final static String mp3Ext = ".mp3";
 
 	/**
 	 * Create SourceDataLine field which decoded audio data would be written to.
@@ -223,7 +230,7 @@ public final class GUISynthesiszer extends JFrame implements MouseListener,
 	/**
 	 * Create MP3Codec field for decoding and playing mp3 encoded audio.
 	 */
-	private MP3Codec mp3Invoker = null;
+	private Accessor mp3Invoker = null;
 
 	/**
 	 * Create float field for store total duration of current mp3 audio.
@@ -492,7 +499,7 @@ public final class GUISynthesiszer extends JFrame implements MouseListener,
 				} else {
 					Thread.sleep(50);
 					playNextSong = true;
-					new requestHandler("playNextSong");
+					new requestHandler(next);
 				}
 			} else if (e.getSource().equals(this.preButton)) {
 				if (Math.pow(e.getX() - preButton.getHeight() / 2, 2)
@@ -502,7 +509,7 @@ public final class GUISynthesiszer extends JFrame implements MouseListener,
 				} else {
 					Thread.sleep(50);
 					playPreviousSong = true;
-					new requestHandler("playPreviousSong");
+					new requestHandler(previous);
 				}
 			} else if (e.getSource().equals(this.stopButton)) {
 				if (Math.pow(e.getX() - stopButton.getHeight() / 2, 2)
@@ -512,7 +519,7 @@ public final class GUISynthesiszer extends JFrame implements MouseListener,
 				} else {
 					Thread.sleep(50);
 					stopPlaying = true;
-					new requestHandler("stopPlaying");
+					new requestHandler(stop);
 				}
 			} else if (e.getSource().equals(this.playButton)) {
 				if (Math.pow(e.getX() - playButton.getHeight() / 2, 2)
@@ -529,7 +536,7 @@ public final class GUISynthesiszer extends JFrame implements MouseListener,
 							}
 							playOrPause = true;
 							synchronized (lock) {
-								new requestHandler("playOrPause");
+								new requestHandler(playOrNot);
 								try {
 									Thread.sleep(300);
 								} catch (InterruptedException e1) {
@@ -544,7 +551,7 @@ public final class GUISynthesiszer extends JFrame implements MouseListener,
 								playOrPause = !isPlaying;
 							}
 							synchronized (lock) {
-								new requestHandler("playOrPause");
+								new requestHandler(playOrNot);
 								try {
 									Thread.sleep(300);
 								} catch (InterruptedException e1) {
@@ -561,7 +568,7 @@ public final class GUISynthesiszer extends JFrame implements MouseListener,
 							}
 							playOrPause = true;
 							synchronized (lock) {
-								new requestHandler("playOrPause");
+								new requestHandler(playOrNot);
 								try {
 									Thread.sleep(300);
 								} catch (InterruptedException e1) {
@@ -576,7 +583,7 @@ public final class GUISynthesiszer extends JFrame implements MouseListener,
 								playOrPause = !isPlaying;
 							}
 							synchronized (lock) {
-								new requestHandler("playOrPause");
+								new requestHandler(playOrNot);
 								try {
 									Thread.sleep(300);
 								} catch (InterruptedException e1) {
@@ -627,19 +634,17 @@ public final class GUISynthesiszer extends JFrame implements MouseListener,
 											JOptionPane.YES_NO_CANCEL_OPTION,
 											JOptionPane.QUESTION_MESSAGE);
 							if (reply == JOptionPane.YES_OPTION) {
+								if (isPlaying) {
+									isPlaying = !isPlaying;
+									stopPlaying = true;
+									new requestHandler(stop);
+								}
 								songToPlay = searchRes.toAbsolutePath();
 								lastPlayed = songToPlay;
-								if (!isPlaying) {
-									isPlaying = !isPlaying;
-								}
-								if (!stopPlaying) {
-									stopPlaying = !stopPlaying;
-									new requestHandler("stopPlaying");
-								}
 								while (wayPlaying || FLACCodec.waySearching()) {
 								}
 								askForAChange = true;
-								Thread.sleep(200);
+								Thread.sleep(20);
 								if (!songsHavePlayed.contains(songToPlay))
 									songsHavePlayed.add(songToPlay);
 								if (isPlaying) {
@@ -647,7 +652,7 @@ public final class GUISynthesiszer extends JFrame implements MouseListener,
 								}
 								playOrPause = true;
 								synchronized (lock) {
-									new requestHandler("playOrPause");
+									new requestHandler(playOrNot);
 									Thread.sleep(300);
 									lock.notify();
 								}
@@ -740,7 +745,7 @@ public final class GUISynthesiszer extends JFrame implements MouseListener,
 		public requestHandler(String option) {
 			try {
 				switch (option) {
-				case "playNextSong":
+				case next:
 					logger.log(Level.INFO, "Switching to next song.");
 					preConditionHandler();
 					if (playNextSong) {
@@ -758,7 +763,7 @@ public final class GUISynthesiszer extends JFrame implements MouseListener,
 					postConditionHandler();
 					break;
 				// handling play previous song
-				case "playPreviousSong":
+				case previous:
 					logger.log(Level.INFO, "Start playing previous audio.");
 					preConditionHandler();
 					if (playPreviousSong) {
@@ -774,12 +779,12 @@ public final class GUISynthesiszer extends JFrame implements MouseListener,
 							stopPlaying = !stopPlaying;
 						}
 						playButton.setIcon(startIcon);
-						new requestHandler("stopPlaying");
+						new requestHandler(stop);
 						return;
 					}
 					postConditionHandler();
 					break;
-				case "playOrPause":
+				case playOrNot:
 					if (stopPlaying) {
 						stopPlaying = !stopPlaying;
 					}
@@ -793,38 +798,34 @@ public final class GUISynthesiszer extends JFrame implements MouseListener,
 						howToPlay(mp3Ext);
 					}
 					break;
-				case "stopPlaying":
+				case stop:
 					logger.log(Level.INFO, "Stop current audio.");
 					while (wayPlaying || FLACCodec.waySearching()) {
 						Thread.sleep(1);
 					}
 					askForAChange = true;
-					Thread.sleep(10);
-					synchronized (lock) {
-						// reset GUI outlook.
-						if (songToPlay.toString().endsWith(flacExt)) {
-							FLACCodec.closeFile();
-						} else if (songToPlay.toString().endsWith(mp3Ext)) {
-							// mp3Invoker.closeStreaming();
-							if (isPlaying) {
-								playButton.setIcon(startIcon);
-								isPlaying = !isPlaying;
-							}
-							if (mp3Invoker != null) {
-								mp3Invoker.closeStreaming();
-							}
-							mp3Invoker = null;
-						}
-						lock.notify();
-					}
-					Thread.sleep(300);
-					slider.setValue(slider.getMinimum());
-					slider.setEnabled(false);
 					lyricsLabelPre.setText(quotes[0]);
 					lyricsLabelMid.setText(quotes[0]);
 					lyricsLabelNext.setText(quotes[0]);
-					synthesiszer.setTitle(quotes[(int) (quotes.length * Math
-							.random())]);
+					synthesiszer.setTitle(quotes[0]);
+					Thread.sleep(10);
+					// reset GUI outlook.
+					if (songToPlay.toString().endsWith(flacExt)) {
+						FLACCodec.closeFile();
+					} else if (songToPlay.toString().endsWith(mp3Ext)) {
+						// mp3Invoker.closeStreaming();
+						if (isPlaying) {
+							playButton.setIcon(startIcon);
+							isPlaying = !isPlaying;
+						}
+						if (mp3Invoker != null) {
+							mp3Invoker.closeStreaming();
+						}
+						mp3Invoker = null;
+					}
+					Thread.sleep(100);
+					slider.setValue(slider.getMinimum());
+					slider.setEnabled(false);
 					if (stopPlaying) {
 						stopPlaying = !stopPlaying;
 					}
@@ -892,7 +893,7 @@ public final class GUISynthesiszer extends JFrame implements MouseListener,
 					playButton.setIcon(startIcon);
 					logger.log(Level.INFO,
 							"Stop playing when current song is the most recently played one by default.");
-					new requestHandler("stopPlaying");
+					new requestHandler(stop);
 					return;
 				}
 
@@ -993,7 +994,7 @@ public final class GUISynthesiszer extends JFrame implements MouseListener,
 						askForAChange = true;
 						timeLabel.setText(alignment + timeLabelInit);
 
-						if ((mp3Invoker = MP3Codec.createInstance(songToPlay)) != null)
+						if ((mp3Invoker = Accessor.createInstance(songToPlay)) != null)
 							logger.log(Level.INFO,
 									"Successfully created an instance for current null instance of mp3 invoker.");
 						else
@@ -1131,7 +1132,7 @@ public final class GUISynthesiszer extends JFrame implements MouseListener,
 						filesNotBeenInitialized = true;
 						logger.log(Level.INFO,
 								"Creating mp3 invoker for decoding and playing current mp3 song to play.");
-						if ((mp3Invoker = MP3Codec.createInstance(songToPlay)) != null)
+						if ((mp3Invoker = Accessor.createInstance(songToPlay)) != null)
 							logger.log(Level.INFO,
 									"Successfully created an instance for current null instance of mp3 invoker.");
 						else
@@ -1183,7 +1184,7 @@ public final class GUISynthesiszer extends JFrame implements MouseListener,
 				logger.log(Level.WARNING,
 						"Stream has failed to initialize, thread is quitting.");
 				stopPlaying = true;
-				new requestHandler("stopPlaying");
+				new requestHandler(stop);
 				try {
 					Thread.sleep(10);
 				} catch (InterruptedException e) {
@@ -1234,7 +1235,7 @@ public final class GUISynthesiszer extends JFrame implements MouseListener,
 						} else if (playPreviousSong) {
 							break;
 						} else if (stopPlaying) {
-							new requestHandler("stopPlaying");
+							new requestHandler(stop);
 							break;
 						} else if (!isPlaying) {
 							Thread.sleep(1);
@@ -1317,7 +1318,7 @@ public final class GUISynthesiszer extends JFrame implements MouseListener,
 									lock.notify();
 									playNextSong = true;
 									Thread.sleep(1000);
-									new requestHandler("playNextSong");
+									new requestHandler(next);
 									break;
 								}
 							}
@@ -1353,14 +1354,14 @@ public final class GUISynthesiszer extends JFrame implements MouseListener,
 									- clipStartTime;
 							if (!mp3Invoker.play()) {
 								// stopPlaying = true;
-								// new requestHandler("stopPlaying");
+								// new requestHandler(stop);
 								playNextSong = true;
-								new requestHandler("playNextSong");
+								new requestHandler(next);
 								break;
 							}
 						} else {
 							stopPlaying = true;
-							new requestHandler("stopPlaying");
+							new requestHandler(stop);
 							break;
 						}
 						setSliderPosition((double) (currentTimeInMicros * reciprocalOfDuration));
@@ -1371,7 +1372,7 @@ public final class GUISynthesiszer extends JFrame implements MouseListener,
 						"The I/O device is not ready!",
 						"I/O Error(s) occurred!", JOptionPane.ERROR_MESSAGE);
 				ex.printStackTrace();
-				new requestHandler("stopPlaying");
+				new requestHandler(stop);
 			} catch (InterruptedException | BadFileFormatException
 					| JavaLayerException e) {
 				e.printStackTrace();
@@ -1436,13 +1437,13 @@ public final class GUISynthesiszer extends JFrame implements MouseListener,
 				|| e.getKeyCode() == 39 && e.getModifiersEx() == 64) {
 			nextButton.requestFocusInWindow();
 			playNextSong = true;
-			new requestHandler("playNextSong");
+			new requestHandler(next);
 		} else if (e.getKeyCode() == 37 && e.getModifiersEx() == 128
 				|| e.getKeyCode() == 37 && e.getModifiersEx() == 512
 				|| e.getKeyCode() == 37 && e.getModifiersEx() == 64) {
 			preButton.requestFocusInWindow();
 			playPreviousSong = true;
-			new requestHandler("playPreviousSong");
+			new requestHandler(previous);
 		} else if (e.getKeyCode() == 32) {
 			playButton.requestFocusInWindow();
 			if (songToPlay.toString().endsWith(flacExt)) {
@@ -1453,7 +1454,7 @@ public final class GUISynthesiszer extends JFrame implements MouseListener,
 					}
 					playOrPause = true;
 					synchronized (lock) {
-						new requestHandler("playOrPause");
+						new requestHandler(playOrNot);
 						try {
 							Thread.sleep(300);
 						} catch (InterruptedException e1) {
@@ -1468,7 +1469,7 @@ public final class GUISynthesiszer extends JFrame implements MouseListener,
 						playOrPause = !isPlaying;
 					}
 					synchronized (lock) {
-						new requestHandler("playOrPause");
+						new requestHandler(playOrNot);
 						try {
 							Thread.sleep(300);
 						} catch (InterruptedException e1) {
@@ -1485,7 +1486,7 @@ public final class GUISynthesiszer extends JFrame implements MouseListener,
 					}
 					playOrPause = true;
 					synchronized (lock) {
-						new requestHandler("playOrPause");
+						new requestHandler(playOrNot);
 						try {
 							Thread.sleep(300);
 						} catch (InterruptedException e1) {
@@ -1500,7 +1501,7 @@ public final class GUISynthesiszer extends JFrame implements MouseListener,
 						playOrPause = !isPlaying;
 					}
 					synchronized (lock) {
-						new requestHandler("playOrPause");
+						new requestHandler(playOrNot);
 						try {
 							Thread.sleep(300);
 						} catch (InterruptedException e1) {
