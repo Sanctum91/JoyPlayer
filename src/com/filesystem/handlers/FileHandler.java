@@ -1,5 +1,5 @@
 /*
- *    Copyright [2018] [Justin Nelson]
+ *    Copyright [2018] [Justin Lee]
 
    Licensed under the Apache License, Version 2.0 (the "License");
    you may not use this file except in compliance with the License.
@@ -21,9 +21,9 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.LinkedList;
 
-public final class FileAndDirectory {
+public final class FileHandler {
 
-	private FileAndDirectory() {
+	private FileHandler() {
 	}
 
 	/**
