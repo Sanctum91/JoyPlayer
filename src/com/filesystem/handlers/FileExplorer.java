@@ -1,5 +1,5 @@
 /*
- *    Copyright [2018] [Justin Lee]
+ *    Copyright [2018] [Justin Nelson]
 
    Licensed under the Apache License, Version 2.0 (the "License");
    you may not use this file except in compliance with the License.
@@ -343,7 +343,7 @@ public final class FileExplorer {
 					}
 				}
 			}
-		} catch (NumberFormatException | IOException e) {
+		} catch (IOException e) {
 			e.printStackTrace();
 		}
 		Logger.getGlobal().log(Level.INFO, "Lyrics parsing has finished.");

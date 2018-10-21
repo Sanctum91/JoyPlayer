@@ -1,5 +1,5 @@
 /*
- *    Copyright [2018] [Justin Lee]
+ *    Copyright [2018] [Justin Nelson]
 
    Licensed under the Apache License, Version 2.0 (the "License");
    you may not use this file except in compliance with the License.
@@ -464,7 +464,7 @@ public final class GUISynthesiszer extends JFrame implements MouseListener,
 	 * 
 	 * @return
 	 */
-	public static GUISynthesiszer GUIsynthesiszerInitializer() {
+	public static GUISynthesiszer Initializer() {
 		if (synthesiszer == null) {
 			synthesiszer = new GUISynthesiszer();
 			synthesiszer
@@ -477,7 +477,7 @@ public final class GUISynthesiszer extends JFrame implements MouseListener,
 
 	public static void main(String[] args) throws IOException {
 		// logger.setLevel(Level.OFF);
-		GUIsynthesiszerInitializer();
+		Initializer();
 	}
 
 	public static Boolean wayPlaying() {
@@ -634,28 +634,25 @@ public final class GUISynthesiszer extends JFrame implements MouseListener,
 											JOptionPane.YES_NO_CANCEL_OPTION,
 											JOptionPane.QUESTION_MESSAGE);
 							if (reply == JOptionPane.YES_OPTION) {
-								if (isPlaying) {
+								if (!isPlaying) {
 									isPlaying = !isPlaying;
-									stopPlaying = true;
-									new requestHandler(stop);
 								}
+								stopPlaying = true;
+								new requestHandler(stop);
+								Thread.sleep(300);
 								songToPlay = searchRes.toAbsolutePath();
 								lastPlayed = songToPlay;
 								while (wayPlaying || FLACCodec.waySearching()) {
 								}
 								askForAChange = true;
-								Thread.sleep(20);
 								if (!songsHavePlayed.contains(songToPlay))
 									songsHavePlayed.add(songToPlay);
-								if (isPlaying) {
-									isPlaying = !isPlaying;
+								if (songToPlay.toString().endsWith(mp3Ext)) {
+									mp3Invoker = null;
 								}
 								playOrPause = true;
-								synchronized (lock) {
-									new requestHandler(playOrNot);
-									Thread.sleep(300);
-									lock.notify();
-								}
+								new requestHandler(playOrNot);
+								Thread.sleep(300);
 								break;
 							} else if (reply == JOptionPane.NO_OPTION) {
 								Thread.sleep(100);
@@ -823,7 +820,6 @@ public final class GUISynthesiszer extends JFrame implements MouseListener,
 						}
 						mp3Invoker = null;
 					}
-					Thread.sleep(100);
 					slider.setValue(slider.getMinimum());
 					slider.setEnabled(false);
 					if (stopPlaying) {
@@ -1798,13 +1794,6 @@ public final class GUISynthesiszer extends JFrame implements MouseListener,
 					e.printStackTrace();
 				}
 			}
-			// while (getState() == JFrame.ICONIFIED) {
-			// try {
-			// Thread.sleep(50);
-			// } catch (InterruptedException e) {
-			// e.printStackTrace();
-			// }
-			// }
 			lyricsLabelPre.setText(quotes[0]);
 			lyricsLabelMid.setText(quotes[0]);
 			lyricsLabelNext.setText(quotes[0]);
