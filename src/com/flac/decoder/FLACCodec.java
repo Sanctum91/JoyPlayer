@@ -19,7 +19,6 @@ import java.io.BufferedInputStream;
 import java.io.EOFException;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.RandomAccessFile;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -27,9 +26,10 @@ import java.util.Arrays;
 import javax.sound.sampled.LineUnavailableException;
 import javax.swing.JOptionPane;
 
-import com.audioplayer.UIlayout.GUISynthesiszer;
+import com.audioplayer.GraphAndSound.Codec;
+import com.audioplayer.GraphAndSound.GUISynthesiszer;
 
-public final class FLACCodec {
+public final class FLACCodec extends Codec {
 
 	/**
 	 * Constants for verifying stream marker.
@@ -39,8 +39,6 @@ public final class FLACCodec {
 	private static final int valueOfCharL = 0x4C;
 
 	private static final long streamMarker = 0x664C6143L;
-
-	private static final int bitsofOneByte = 8;
 
 	// Fixed prediction coefficients.
 	private static final int[][] FIXED_PREDICTION_COEFFICIENTS = { {}, { 1 },
@@ -75,11 +73,7 @@ public final class FLACCodec {
 	// Store header bytes for CRC verification
 	private static ArrayList<Integer> rawHeader = new ArrayList<Integer>();
 
-	private static boolean isReady = false;
-
 	private static Stream input = null;
-
-	private static FLACCodec handler = null;
 
 	private static double request = -0.0001;
 
@@ -89,37 +83,34 @@ public final class FLACCodec {
 
 	private int fixedBlockSize;
 
-	private int sampleRateInHz;
-
-	private int numOfChannels;
-
-	private int bitsPerSample;
-
 	private long totalSamplesInStream;
 
-	private double audioLength;
-
-	private int constantBlockSize;
+	private static int constantBlockSize;
 
 	private long metadataEndPos;
 
+	@Override
 	public double getAudioLength() {
 		return audioLength;
+	}
+
+	public static int getConstantBlockSize() {
+		return constantBlockSize;
 	}
 
 	public int getFixedBlockSize() {
 		return fixedBlockSize;
 	}
 
-	public int getSampleRateInHz() {
+	public static int getSampleRateInHz() {
 		return sampleRateInHz;
 	}
 
-	public int getNumOfChannels() {
+	public static int getNumOfChannels() {
 		return numOfChannels;
 	}
 
-	public int getBitsPerSample() {
+	public static int getBitsPerSample() {
 		return bitsPerSample;
 	}
 
@@ -127,54 +118,42 @@ public final class FLACCodec {
 		return totalSamplesInStream;
 	}
 
-	public Stream getCurrentStream() {
-		return input;
-	}
-
 	// Close stream
-	public static void closeFile() throws IOException, InterruptedException {
-		if (handler != null) {
-			handler.close();
-			handler = null;
-		}
-	}
-
-	/**
-	 * test if initialization has finished.
-	 * 
-	 * @return
-	 */
-	public static Boolean isReady() {
-		if (isReady) {
-			return true;
-		} else {
-			return false;
+	public static void closeFile() {
+		if (codec != null) {
+			try {
+				close();
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
+			codec = null;
 		}
 	}
 
 	public static FLACCodec getInstance() {
-		return handler;
+		return (FLACCodec) codec;
 	}
 
-	// Test if handler is handling the search request.
+	// Test if codec is handling the search request.
 	public static Boolean waySearching() {
 		return waySearching;
 	}
 
 	// Create a new instance in singleton mode.
-	public static Boolean createInstance(Path songPath) throws IOException,
-			BadFileFormatException {
-		handler = null;
-		handler = new FLACCodec(songPath);
-		if (handler != null) {
-			return true;
-		} else {
-			return false;
+	public static FLACCodec createInstance(Path songPath) {
+		codec = null;
+		try {
+			codec = new FLACCodec(songPath);
+		} catch (IOException | BadFileFormatException | InterruptedException e) {
+			e.printStackTrace();
 		}
+		return (FLACCodec) codec;
 	}
 
 	// Constructor
-	private FLACCodec(Path songPath) throws IOException, BadFileFormatException {
+	private FLACCodec(Path songPath) throws IOException,
+			BadFileFormatException, InterruptedException {
+		super(songPath);
 		input = new Stream(songPath);
 		/**
 		 * <32 bits> "fLaC", the FLAC stream marker in ASCII, meaning byte 0 of
@@ -206,12 +185,12 @@ public final class FLACCodec {
 			throw new BadFileFormatException("Invalid stream marker!");
 		}
 		/**
-		 * METADATA_BLOCK_HEADER handler (There could be more than one metadata
+		 * METADATA_BLOCK_HEADER codec (There could be more than one metadata
 		 * blocks, and all the block headers shall the same size)
 		 */
 		boolean isLast = false;
 		while (!isLast) {
-			// process each handler
+			// process each codec
 			isLast = input.readBit(1) == 1;
 			int type = input.readBit(7);
 			int bytesOfMetadataToFollow = input.readBit(24);
@@ -266,8 +245,7 @@ public final class FLACCodec {
 		return crc;
 	}
 
-	// Close byte stream
-	private void close() throws IOException {
+	protected static void close() throws IOException {
 		input.close();
 		input = null;
 	}
@@ -318,6 +296,10 @@ public final class FLACCodec {
 			}
 			curSamplePos = nextSamplePos;
 		}
+	}
+
+	public static void disableSearching() {
+		waySearching = false;
 	}
 
 	/**
@@ -371,11 +353,10 @@ public final class FLACCodec {
 			LineUnavailableException, InterruptedException {
 		long[][] samples = null;
 		if (request >= 0) {
-			long samplePos = Math.round(handler.getTotalSamplesInStream()
-					* request);
-			samples = handler.findNextDecodeableBlock(samplePos);
+			long samplePos = Math.round(getTotalSamplesInStream() * request);
+			samples = findNextDecodeableBlock(samplePos);
 		} else {
-			if (handler == null)
+			if (codec == null)
 				return;
 			Object[] temp = readNextBlock(false);
 			if (temp != null) {
@@ -385,7 +366,7 @@ public final class FLACCodec {
 		if (samples == null)
 			return;
 		// convert samples to channel-interleaved bytes in little-endian
-		int bytesPerSample = handler.getBitsPerSample() / 8;
+		int bytesPerSample = getBitsPerSample() / 8;
 		sampleInBytes = new byte[samples.length * samples[0].length
 				* bytesPerSample];
 		for (int i = 0, k = 0; i < samples[0].length; i++) {
@@ -420,7 +401,7 @@ public final class FLACCodec {
 			if (sync != 0x3FFE)
 				return null;
 			if ((rawHeader.get(1) & 2) != 0)
-				throw handler.new BadFileFormatException("Reserved bit");
+				throw codec.new BadFileFormatException("Reserved bit");
 			int blockStrategy = rawHeader.get(1) & 1;
 			rawHeader.add(input.readByte());
 			int blockSizeCode = rawHeader.get(2) >> 4;
@@ -430,37 +411,36 @@ public final class FLACCodec {
 			/* Sample size in bits */
 			switch ((rawHeader.get(3) >> 1) & 7) {
 			case 1:
-				if (handler.bitsPerSample != 8)
-					throw handler.new BadFileFormatException(
+				if (bitsPerSample != 8)
+					throw codec.new BadFileFormatException(
 							"Sample depth mismatch");
 				break;
 			case 2:
-				if (handler.bitsPerSample != 12)
-					throw handler.new BadFileFormatException(
+				if (bitsPerSample != 12)
+					throw codec.new BadFileFormatException(
 							"Sample depth mismatch");
 				break;
 			case 4:
-				if (handler.bitsPerSample != 16)
-					throw handler.new BadFileFormatException(
+				if (bitsPerSample != 16)
+					throw codec.new BadFileFormatException(
 							"Sample depth mismatch");
 				break;
 			case 5:
-				if (handler.bitsPerSample != 20)
-					throw handler.new BadFileFormatException(
+				if (bitsPerSample != 20)
+					throw codec.new BadFileFormatException(
 							"Sample depth mismatch");
 				break;
 			case 6:
-				if (handler.bitsPerSample != 24)
-					throw handler.new BadFileFormatException(
+				if (bitsPerSample != 24)
+					throw codec.new BadFileFormatException(
 							"Sample depth mismatch");
 				break;
 			default:
-				throw handler.new BadFileFormatException(
-						"Sample depth mismatch");
+				throw codec.new BadFileFormatException("Sample depth mismatch");
 			}
 			/* Reserved bit */
 			if ((rawHeader.get(3) & 1) != 0)
-				throw handler.new BadFileFormatException(
+				throw codec.new BadFileFormatException(
 						"reserved bit value is not right.");
 
 			rawHeader.add(input.readByte());
@@ -495,7 +475,7 @@ public final class FLACCodec {
 			} else if (blockSizeCode >= 8 && blockSizeCode <= 15)
 				blockSize = 256 << (blockSizeCode - 8);
 			else
-				throw handler.new BadFileFormatException(
+				throw codec.new BadFileFormatException(
 						"Invalid blocksize code!");
 
 			/* Sample rate */
@@ -510,10 +490,10 @@ public final class FLACCodec {
 			int crc8 = input.readByte();
 			int crc8_val = crc8_Generator(rawHeader);
 			if (crc8 != crc8_val)
-				throw handler.new BadFileFormatException(
+				throw codec.new BadFileFormatException(
 						"Unexpected CRC-8 value.");
-			long[][] samples = decodeSubframes(blockSize,
-					handler.bitsPerSample, channleAssign);
+			long[][] samples = decodeSubframes(blockSize, bitsPerSample,
+					channleAssign);
 			/* Align to byte */
 			input.alignToByte();
 			/* read Frame footer */
@@ -528,7 +508,7 @@ public final class FLACCodec {
 			if (sync != 0x3FFE)
 				return null;
 			if (input.readBit(1) != 0)
-				throw handler.new BadFileFormatException("Reserved bit");
+				throw codec.new BadFileFormatException("Reserved bit");
 			int blockStrategy = input.readBit(1);
 
 			// Read numerous header fields, and ignore some of them
@@ -537,36 +517,36 @@ public final class FLACCodec {
 			int chanAsgn = input.readBit(4);
 			switch (input.readBit(3)) {
 			case 1:
-				if (handler.bitsPerSample != 8)
-					throw handler.new BadFileFormatException(
+				if (bitsPerSample != 8)
+					throw codec.new BadFileFormatException(
 							"Sample depth mismatch");
 				break;
 			case 2:
-				if (handler.bitsPerSample != 12)
-					throw handler.new BadFileFormatException(
+				if (bitsPerSample != 12)
+					throw codec.new BadFileFormatException(
 							"Sample depth mismatch");
 				break;
 			case 4:
-				if (handler.bitsPerSample != 16)
-					throw handler.new BadFileFormatException(
+				if (bitsPerSample != 16)
+					throw codec.new BadFileFormatException(
 							"Sample depth mismatch");
 				break;
 			case 5:
-				if (handler.bitsPerSample != 20)
-					throw handler.new BadFileFormatException(
+				if (bitsPerSample != 20)
+					throw codec.new BadFileFormatException(
 							"Sample depth mismatch");
 				break;
 			case 6:
-				if (handler.bitsPerSample != 24)
-					throw handler.new BadFileFormatException(
+				if (bitsPerSample != 24)
+					throw codec.new BadFileFormatException(
 							"Sample depth mismatch");
 				break;
 			default:
-				throw handler.new BadFileFormatException(
+				throw codec.new BadFileFormatException(
 						"Reserved/invalid sample depth");
 			}
 			if (input.readBit(1) != 0)
-				throw handler.new BadFileFormatException("Reserved bit");
+				throw codec.new BadFileFormatException("Reserved bit");
 
 			byteVal = input.readBit(8);
 			long rawPosition;
@@ -593,7 +573,7 @@ public final class FLACCodec {
 			else if (8 <= blockSizeCode && blockSizeCode <= 15)
 				blockSize = 256 << (blockSizeCode - 8);
 			else
-				throw handler.new BadFileFormatException("Reserved block size");
+				throw codec.new BadFileFormatException("Reserved block size");
 
 			if (sampleRateCode == 12)
 				input.readBit(8);
@@ -602,18 +582,17 @@ public final class FLACCodec {
 
 			input.readBit(8);
 			// Decode each channel's subframe, then skip footer
-			long[][] samples = decodeSubframes(blockSize,
-					handler.bitsPerSample, chanAsgn);
+			long[][] samples = decodeSubframes(blockSize, bitsPerSample,
+					chanAsgn);
 			input.alignToByte();
 			input.readBit(16);
-			if (handler == null) {
+			if (codec == null) {
 				return null;
 			}
 			return new Object[] {
 					samples,
 					rawPosition
-							* (blockStrategy == 0 ? handler.constantBlockSize
-									: 1) };
+							* (blockStrategy == 0 ? getConstantBlockSize() : 1) };
 		}
 
 	}
@@ -659,7 +638,7 @@ public final class FLACCodec {
 				}
 			}
 		} else
-			throw handler.new BadFileFormatException(
+			throw codec.new BadFileFormatException(
 					"Reserved channel assignment");
 		return result;
 	}
@@ -677,7 +656,7 @@ public final class FLACCodec {
 	private static void decodeSubframe(int sampleDepth, long[] result)
 			throws BadFileFormatException, IOException {
 		if (input.readBit(1) != 0)
-			throw handler.new BadFileFormatException("Invalid padding bit");
+			throw codec.new BadFileFormatException("Invalid padding bit");
 		int type = input.readBit(6);
 		int shift = input.readBit(1);
 		if (shift == 1) {
@@ -734,13 +713,13 @@ public final class FLACCodec {
 				result[i] += sum >> lpcShift;
 			}
 		} else
-			throw handler.new BadFileFormatException("Invalid predicton order.");
+			throw codec.new BadFileFormatException("Invalid predicton order.");
 		for (int i = 0; i < result.length; i++)
 			result[i] <<= shift;
 	}
 
 	/**
-	 * Entropy coding method handler, with which to restore residuals into
+	 * Entropy coding method codec, with which to restore residuals into
 	 * samples.
 	 * 
 	 * @param warmup
@@ -754,14 +733,14 @@ public final class FLACCodec {
 			throws BadFileFormatException, IOException {
 		int method = input.readBit(2);
 		if (method >= 2)
-			throw handler.new BadFileFormatException(
+			throw codec.new BadFileFormatException(
 					"Reserved residual coding method");
 		int paramBits = method == 0 ? 4 : 5;
 		int escapeParam = method == 0 ? 0xF : 0x1F;
 		int partitionOrder = input.readBit(4);
 		int numPartitions = 1 << partitionOrder;
 		if (result.length % numPartitions != 0)
-			throw handler.new BadFileFormatException(
+			throw codec.new BadFileFormatException(
 					"Block size not divisible by number of Rice partitions");
 		int partitionSize = result.length / numPartitions;
 
@@ -793,15 +772,12 @@ public final class FLACCodec {
 	 *
 	 */
 	private static final class Stream implements Runnable {
-		private RandomAccessFile raf;
 		private long bytePosition;
-		private InputStream byteBuffer;
 		private long bitBuffer;
 		private int bitBufferLen;
 
 		// Stream constructor
 		public Stream(Path file) throws IOException {
-			raf = new RandomAccessFile(file.toFile(), "r");
 			seekTo(0);
 		}
 
@@ -912,22 +888,6 @@ public final class FLACCodec {
 		public void run() {
 			// TODO Auto-generated method stub
 
-		}
-	}
-
-	/**
-	 * User-defined exception for indicating unexpected file data/format has
-	 * occurred.
-	 * 
-	 * @author JoySanctuary
-	 *
-	 */
-	public final class BadFileFormatException extends Exception {
-
-		private static final long serialVersionUID = -6038660784354160702L;
-
-		public BadFileFormatException(String message) {
-			super(message);
 		}
 	}
 

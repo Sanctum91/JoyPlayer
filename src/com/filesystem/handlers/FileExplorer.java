@@ -34,7 +34,7 @@ import java.util.logging.Logger;
 import javax.swing.JFileChooser;
 import javax.swing.JLabel;
 
-import com.audioplayer.UIlayout.GUISynthesiszer;
+import com.audioplayer.GraphAndSound.GUISynthesiszer;
 
 public final class FileExplorer {
 	private static final FileExplorer EXPLORER = new FileExplorer();
@@ -211,16 +211,13 @@ public final class FileExplorer {
 									&& store.charAt(index + 4) == 's') {
 								// appear at the very head of the String
 								if (index == 0) {
-									System.out.println("1" + "&apos;" + store);
 									temp.append("'");
 									store = store.substring(6);
 								} else if (index + 5 < store.length() - 1) {
-									System.out.println("2" + "&apos;" + store);
 									temp.append(store.substring(0, index));
 									temp.append("'");
 									store = store.substring(index + 6);
 								} else {
-									System.out.println("3" + "&apos;" + store);
 									temp.append(store.substring(0,
 											store.length() - 6));
 									temp.append("'");
@@ -236,16 +233,13 @@ public final class FileExplorer {
 							} else if (store.charAt(index + 1) == 'q'
 									&& store.charAt(index + 4) == 't') {
 								if (index == 0) {
-									System.out.println("1" + "&quot;" + store);
 									temp.append("\"");
 									store = store.substring(6);
 								} else if (index + 5 < store.length() - 1) {
-									System.out.println("2" + "&quot;" + store);
 									temp.append(store.substring(0, index));
 									temp.append("\"");
 									store = store.substring(index + 6);
 								} else {
-									System.out.println("3" + "&quot;" + store);
 									temp.append(store.substring(0,
 											store.length() - 6));
 									temp.append("\"");
@@ -261,16 +255,13 @@ public final class FileExplorer {
 							} else if (store.charAt(index + 1) == 'a'
 									&& store.charAt(index + 3) == 'p') {
 								if (index == 0) {
-									System.out.println("1" + "&amp;" + store);
 									temp.append("&");
 									store = store.substring(6);
 								} else if (index + 4 < store.length() - 1) {
-									System.out.println("2" + "&amp;" + store);
 									temp.append(store.substring(0, index));
 									temp.append("&");
 									store = store.substring(index + 5);
 								} else {
-									System.out.println("3" + "&amp;" + store);
 									temp.append(store.substring(0,
 											store.length() - 5));
 									temp.append("&");
@@ -396,6 +387,12 @@ public final class FileExplorer {
 		default:
 			break;
 		}
+	}
+
+	public static void refreshDirectory() {
+		refreshDirectory(mp3Ext);
+		refreshDirectory(flacExt);
+		refreshDirectory(lrcExt);
 	}
 
 	/**
