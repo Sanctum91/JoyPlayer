@@ -22,7 +22,7 @@
  *----------------------------------------------------------------------
  */
 
-package com.codec.player;
+package com.mp3.codec.player;
 
 import javax.sound.sampled.AudioFormat;
 import javax.sound.sampled.AudioSystem;
@@ -31,8 +31,8 @@ import javax.sound.sampled.Line;
 import javax.sound.sampled.LineUnavailableException;
 import javax.sound.sampled.SourceDataLine;
 
-import com.mp3.decoder.Decoder;
-import com.mp3.decoder.JavaLayerException;
+import com.mp3.codec.decoder.Decoder;
+import com.mp3.codec.decoder.JavaLayerException;
 
 /**
  * The <code>JavaSoundAudioDevice</code> implements an audio device by using the

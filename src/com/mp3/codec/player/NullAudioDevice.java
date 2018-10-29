@@ -1,6 +1,6 @@
 /*
- * 11/19/04		1.0 moved to LGPL.
- * 01/12/99		Initial version.	mdm@techie.com
+ * 11/19/04		1.0 moved o LGPL.
+ * 29/01/00		Initial version. mdm@techie.com
  *-----------------------------------------------------------------------
  *   This program is free software; you can redistribute it and/or modify
  *   it under the terms of the GNU Library General Public License as published
@@ -18,48 +18,20 @@
  *----------------------------------------------------------------------
  */
 
-package com.mp3.codec.decoder;
+package com.mp3.codec.player;
 
 /**
- * The <code>DecoderException</code> represents the class of
- * errors that can occur when decoding MPEG audio. 
+ * The <code>NullAudioDevice</code> implements a silent, no-op
+ * audio device. This is useful for testing purposes.
  * 
- * @author MDM
+ * @since 0.0.8
+ * @author Mat McGowan
  */
-public class DecoderException extends JavaLayerException
-	implements DecoderErrors
-{	
-	/**
-	 * 
-	 */
-	private static final long serialVersionUID = -2221571326862746035L;
-	private int		errorcode = UNKNOWN_ERROR;
-	
-	public DecoderException(String msg, Throwable t)
+public class NullAudioDevice extends AudioDeviceBase
+{
+			
+	public long getPosition()
 	{
-		super(msg, t);	
+		return 0;
 	}
-	
-	public DecoderException(int errorcode, Throwable t)
-	{
-		this(getErrorString(errorcode), t);
-		this.errorcode = errorcode;
-	}
-	
-	public int getErrorCode()
-	{
-		return errorcode;	
-	}
-	
-	
-	static public String getErrorString(int errorcode)
-	{
-		// REVIEW: use resource file to map error codes
-		// to locale-sensitive strings. 
-		
-		return "Decoder errorcode "+Integer.toHexString(errorcode);
-	}
-	
-	
 }
-

@@ -778,7 +778,8 @@ public final class FLACCodec extends Codec {
 
 		// Stream constructor
 		public Stream(Path file) throws IOException {
-			seekTo(0);
+			bytePosition = 0;
+			bitBufferLen = 0;
 		}
 
 		public void close() throws IOException {

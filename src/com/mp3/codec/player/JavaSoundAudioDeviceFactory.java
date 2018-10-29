@@ -18,9 +18,9 @@
  *----------------------------------------------------------------------
  */
 
-package com.codec.player;
+package com.mp3.codec.player;
 
-import com.mp3.decoder.JavaLayerException;
+import com.mp3.codec.decoder.JavaLayerException;
 
 /**
  * This class is responsible for creating instances of the JavaSoundAudioDevice.

@@ -18,10 +18,10 @@
  *----------------------------------------------------------------------
  */
 
-package com.codec.player;
+package com.mp3.codec.player;
 
-import com.mp3.decoder.Decoder;
-import com.mp3.decoder.JavaLayerException;
+import com.mp3.codec.decoder.Decoder;
+import com.mp3.codec.decoder.JavaLayerException;
 
 /**
  * The <code>AudioDevice</code> interface provides an abstraction for a device
@@ -81,7 +81,7 @@ public interface AudioDevice {
 	 * 
 	 *            This method may return prior to the samples actually being
 	 *            played by the audio device.
-	 * @throws com.mp3.decoder.JavaLayerException
+	 * @throws com.mp3.codec.decoder.JavaLayerException
 	 */
 	public void write(short[] samples, int offs, int len)
 			throws JavaLayerException;

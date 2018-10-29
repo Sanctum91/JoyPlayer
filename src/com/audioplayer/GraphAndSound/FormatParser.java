@@ -26,8 +26,8 @@ import com.audioplayer.GraphAndSound.Codec.BadFileFormatException;
 import com.codec.player.MP3Codec;
 import com.codec.player.Player;
 import com.flac.decoder.FLACCodec;
-import com.mp3.codec.decoder.JavaLayerException;
-import com.mp3.codec.decoder.SampleBuffer;
+import com.mp3.decoder.JavaLayerException;
+import com.mp3.decoder.SampleBuffer;
 
 /**
  * Create an audio parser which is capable of automatically recognize audio

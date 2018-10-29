@@ -21,11 +21,12 @@
  *----------------------------------------------------------------------
  */
 
-package com.codec.player;
+package com.mp3.codec.player;
 
 import java.io.BufferedInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.RandomAccessFile;
 import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -34,10 +35,9 @@ import javax.sound.sampled.LineUnavailableException;
 import javax.sound.sampled.UnsupportedAudioFileException;
 import javax.swing.JOptionPane;
 
-import com.audioplayer.GraphAndSound.Codec;
-import com.mp3.decoder.BitstreamException;
-import com.mp3.decoder.Header;
-import com.mp3.decoder.JavaLayerException;
+import com.mp3.codec.decoder.BitstreamException;
+import com.mp3.codec.decoder.Header;
+import com.mp3.codec.decoder.JavaLayerException;
 
 /**
  * The <code>MP3Codec</code> class implements a simple command-line player for
@@ -45,69 +45,29 @@ import com.mp3.decoder.JavaLayerException;
  *
  * @author Mat McGowan (mdm@techie.com)
  */
-public final class MP3Codec extends Codec {
+public class Accessor {
 
-	private static Player player = null;
-	private static Header header = null;
-	private static boolean remote;
-	private final static int bitsPerSample = 16;
+	private boolean remote = false;
+	private static Accessor mp3 = null;
+	private Player player = null;
+	private RandomAccessFile fileAccessor = null;
+	private BufferedInputStream in;
+	private Header header = null;
 
 	/**
 	 * Create An instance of MP3 in singleton pattern.
 	 * 
 	 * @param songPath
-	 * @return an instance of MP3, namely codecCodec.
+	 * @return an instance of MP3, namely mp3Codec.
 	 * @throws IOException
+	 * @throws JavaLayerException
 	 */
-	public static MP3Codec createInstance(Path filePath) throws IOException {
-		isReady = false;
-		if (codec == null) {
-			try {
-				codec = new MP3Codec(filePath);
-			} catch (InterruptedException e) {
-				e.printStackTrace();
-			}
+	public static Accessor createInstance(Path filePath) throws IOException,
+			JavaLayerException {
+		if (mp3 == null) {
+			mp3 = new Accessor();
 		}
-		return (MP3Codec) initialize(filePath);
-	}
-
-	private MP3Codec(Path filePath) throws IOException, InterruptedException {
-		super(filePath);
-	}
-
-	public static MP3Codec getInstance() {
-		return (MP3Codec) codec;
-	}
-
-	/**
-	 * get sample rate
-	 * 
-	 * @return
-	 */
-	public static int getSampleRateInHz() {
-		if (header == null) {
-			try {
-				setHeader();
-			} catch (IOException e) {
-				e.printStackTrace();
-			}
-		}
-		return header.frequency();
-	}
-
-	public static int getBitsPerSample() {
-		return bitsPerSample;
-	}
-
-	public static int getNumOfChannels() {
-		if (header == null) {
-			try {
-				setHeader();
-			} catch (IOException e) {
-				e.printStackTrace();
-			}
-		}
-		return header.mode() == 3 ? 1 : 2;
+		return mp3.initialize(filePath);
 	}
 
 	/**
@@ -126,8 +86,8 @@ public final class MP3Codec extends Codec {
 	 * @return
 	 */
 
-	public static Player getPlayerInstance() {
-		return player;
+	public Player getPlayerInstance() {
+		return mp3.player;
 	}
 
 	/**
@@ -136,15 +96,8 @@ public final class MP3Codec extends Codec {
 	 * @throws BitstreamException
 	 */
 
-	public static void closeFile() {
-		if (codec != null) {
-			codec = null;
-		}
-		try {
-			Player.closeFile();
-		} catch (BitstreamException e) {
-			e.printStackTrace();
-		}
+	public void closeStreaming() throws BitstreamException {
+		Player.closeStreaming();
 	}
 
 	/**
@@ -155,38 +108,33 @@ public final class MP3Codec extends Codec {
 	 * @throws LineUnavailableException
 	 */
 
-	public static Boolean decodeFrameHeader() throws BitstreamException,
+	public Boolean decodeFrameHeader() throws BitstreamException,
 			LineUnavailableException {
 		return Player.decodeFrameHeander();
 	}
 
+	private Accessor() {
+	}
+
 	/**
-	 * Initialize attributes of codecCodec if it is not null.
+	 * Initialize attributes of mp3Codec if it is not null.
 	 */
-	public static MP3Codec initialize(Path filePath) {
-		if (!parsePath(filePath))
-			codec = null;
+	private Accessor initialize(Path filePath) {
+		if (!mp3.parsePath(filePath))
+			mp3 = null;
 		else {
 			try {
-				if (remote == true)
-					getURLInputStream(filePath);
+				if (mp3.remote == true)
+					mp3.getURLInputStream(filePath);
 				else {
-					if (player != null) {
-						player = null;
-					}
-					player = new Player(byteBuffer);
-					while (!Player.isReady()) {
-					}
-					if (decodeFrameHeader()) {
-						isReady = true;
-					}
+					mp3.initializeByteStreams(filePath);
+					mp3.player = new Player(mp3.in);
 				}
-			} catch (JavaLayerException | LineUnavailableException
-					| IOException e) {
+			} catch (IOException | JavaLayerException e) {
 				e.printStackTrace();
 			}
 		}
-		return (MP3Codec) codec;
+		return mp3;
 	}
 
 	/**
@@ -198,10 +146,9 @@ public final class MP3Codec extends Codec {
 	 * @throws IOException
 	 * @throws UnsupportedAudioFileException
 	 */
-	@Override
-	public double getAudioLength() throws IOException {
-		setHeader();
-		return header.total_ms((int) raf.length());
+	public float getTotoalDuration() throws IOException {
+		mp3.getHeader();
+		return (float) (1e3 * mp3.fileAccessor.length() / (mp3.header.bitrate() / 8));
 	}
 
 	/**
@@ -210,7 +157,7 @@ public final class MP3Codec extends Codec {
 	 * @param path
 	 * @return
 	 */
-	public static boolean parsePath(Path path) {
+	protected boolean parsePath(Path path) {
 		boolean parsed = false;
 		if (Files.exists(path)) {
 			parsed = true;
@@ -226,10 +173,9 @@ public final class MP3Codec extends Codec {
 	public void showUsage() {
 		System.out.println("Usage: jlp [-url] <filename>");
 		System.out.println("");
+		System.out.println(" e.g. : java javazoom.jl.player.jlp localfile.mp3");
 		System.out
-				.println(" e.g. : java javazoom.jl.player.jlp localfile.codec");
-		System.out
-				.println("        java javazoom.jl.player.jlp -url http://www.server.com/remotefile.codec");
+				.println("        java javazoom.jl.player.jlp -url http://www.server.com/remotefile.mp3");
 		System.out
 				.println("        java javazoom.jl.player.jlp -url http://www.shoutcastserver.com:8000");
 	}
@@ -250,11 +196,36 @@ public final class MP3Codec extends Codec {
 	 * 
 	 * @throws IOException
 	 */
-	protected static void getURLInputStream(Path filePath) throws IOException {
+	protected void getURLInputStream(Path filePath) throws IOException {
 
 		URL url = new URL(filePath.toAbsolutePath().toString());
 		InputStream fin = url.openStream();
-		byteBuffer = new BufferedInputStream(fin);
+		in = new BufferedInputStream(fin);
+	}
+
+	/**
+	 * Initialize byte streams from given file path.
+	 */
+	protected void initializeByteStreams(Path filePath) throws IOException {
+		if (mp3.fileAccessor != null) {
+			mp3.fileAccessor.close();
+			mp3.fileAccessor = null;
+		}
+		// Construct a new input stream based on the RandomAccessFile in respect
+		// to given file path.
+		mp3.fileAccessor = new RandomAccessFile(filePath.toFile(), "r");
+		mp3.in = new BufferedInputStream(new InputStream() {
+
+			@Override
+			public int read() throws IOException {
+				return mp3.fileAccessor.read();
+			}
+
+			@Override
+			public int read(byte[] b, int off, int len) throws IOException {
+				return mp3.fileAccessor.read(b, off, len);
+			}
+		});
 	}
 
 	protected AudioDevice getAudioDevice() throws JavaLayerException {
@@ -268,24 +239,25 @@ public final class MP3Codec extends Codec {
 	 * @throws IOException
 	 * @throws JavaLayerException
 	 */
-	public void seekTo(long pos) throws IOException, JavaLayerException {
-		if (codec == null || raf == null) {
+	private void seekTo(long pos) throws IOException, JavaLayerException {
+		if (mp3 == null || fileAccessor == null) {
 			return;
 		}
-		raf.seek(pos);
-		byteBuffer = new BufferedInputStream(new InputStream() {
+		mp3.fileAccessor.seek(pos);
+		in = new BufferedInputStream(new InputStream() {
 
 			@Override
 			public int read() throws IOException {
-				return raf.read();
+				// TODO Auto-generated method stub
+				return mp3.fileAccessor.read();
 			}
 
 			@Override
 			public int read(byte[] b, int off, int len) throws IOException {
-				return raf.read(b, off, len);
+				return mp3.fileAccessor.read(b, off, len);
 			}
 		});
-		player = new Player(byteBuffer);
+		mp3.player = new Player(in);
 	}
 
 	/**
@@ -293,8 +265,8 @@ public final class MP3Codec extends Codec {
 	 * 
 	 * @throws IOException
 	 */
-	private static void setHeader() throws IOException {
-		header = Player.getHeader();
+	private void getHeader() throws IOException {
+		mp3.header = Player.getHeader();
 	}
 
 	/**
@@ -309,17 +281,16 @@ public final class MP3Codec extends Codec {
 	 */
 	public double readNextDecodebaleFrame(double request) throws IOException,
 			JavaLayerException, LineUnavailableException {
-		if (codec == null) {
+		if (mp3 == null) {
 			return 0;
 		}
-		setHeader();
-		long filePos = Math.round(header.bitrate() / 8 * request
-				* codec.getAudioLength() / 1e3);
-		seekTo(filePos);
+		mp3.getHeader();
+		long filePos = Math.round(mp3.header.bitrate() / 8 * request
+				* mp3.getTotoalDuration() / 1e3);
+		mp3.seekTo(filePos);
 		Player.closeBitStream();
 		Player.decodeFrame();
-		return raf.getFilePointer() * 1e3 / (header.bitrate() / 8)
-				- header.ms_per_frame() * 5;
+		return mp3.fileAccessor.getFilePointer() * 1e3
+				/ (mp3.header.bitrate() / 8) - mp3.header.ms_per_frame() * 5;
 	}
-
 }

@@ -18,12 +18,12 @@
  *----------------------------------------------------------------------
  */
 
-package com.codec.player;
+package com.mp3.codec.player;
 
 import java.util.Enumeration;
 import java.util.Hashtable;
 
-import com.mp3.decoder.JavaLayerException;
+import com.mp3.codec.decoder.JavaLayerException;
 
 /**
  * The <code>FactoryRegistry</code> class stores the factories

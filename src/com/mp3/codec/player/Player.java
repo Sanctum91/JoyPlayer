@@ -18,7 +18,7 @@
  *----------------------------------------------------------------------
  */
 
-package com.codec.player;
+package com.mp3.codec.player;
 
 import java.io.InputStream;
 import java.util.logging.Level;
@@ -30,13 +30,13 @@ import javax.sound.sampled.DataLine;
 import javax.sound.sampled.LineUnavailableException;
 import javax.sound.sampled.SourceDataLine;
 
-import com.mp3.decoder.Bitstream;
-import com.mp3.decoder.BitstreamException;
-import com.mp3.decoder.Decoder;
-import com.mp3.decoder.DecoderException;
-import com.mp3.decoder.Header;
-import com.mp3.decoder.JavaLayerException;
-import com.mp3.decoder.SampleBuffer;
+import com.mp3.codec.decoder.Bitstream;
+import com.mp3.codec.decoder.BitstreamException;
+import com.mp3.codec.decoder.Decoder;
+import com.mp3.codec.decoder.DecoderException;
+import com.mp3.codec.decoder.Header;
+import com.mp3.codec.decoder.JavaLayerException;
+import com.mp3.codec.decoder.SampleBuffer;
 
 /**
  * The <code>Player</code> class implements a simple player for playback of an
@@ -76,8 +76,6 @@ public class Player {
 	 */
 	private boolean complete = false;
 
-	private static boolean isReady = false;
-
 	private static long lastPosition = 0;
 
 	private static Header h = null;
@@ -99,9 +97,6 @@ public class Player {
 
 	public Player(InputStream stream, AudioDevice device)
 			throws JavaLayerException {
-		if (isReady) {
-			isReady = !isReady;
-		}
 		if (bitstream != null) {
 			bitstream = null;
 		}
@@ -119,13 +114,6 @@ public class Player {
 		}
 		audio.open(decoder);
 		sound = (JavaSoundAudioDevice) audio;
-		if (!isReady) {
-			isReady = !isReady;
-		}
-	}
-
-	public static boolean isReady() {
-		return isReady;
 	}
 
 	public void play() throws JavaLayerException, LineUnavailableException {
@@ -251,7 +239,7 @@ public class Player {
 	 * 
 	 * @throws BitstreamException
 	 */
-	public static void closeFile() throws BitstreamException {
+	public static void closeStreaming() throws BitstreamException {
 		if (line != null) {
 			line.close();
 			line = null;
@@ -379,33 +367,21 @@ public class Player {
 	 * @throws DecoderException
 	 * @throws BitstreamException
 	 */
-	public SampleBuffer getDecodedSamples() throws DecoderException,
+	protected SampleBuffer getSampleBuffer() throws DecoderException,
 			BitstreamException {
-		try {
-			h = bitstream.readFrame();
-			if (h == null) {
-				Logger.getGlobal()
-						.log(Level.WARNING, "No more frames to read!");
-				bitstream.close();
-				bitstream = null;
-				Logger.getGlobal().log(Level.WARNING, "mp3 stream has closed!");
-				return null;
-			}
-			output = (SampleBuffer) decoder.decodeFrame(h, bitstream);
-			bitstream.closeFrame();
-		} catch (BitstreamException ex) {
+		h = bitstream.readFrame();
+		if (h == null) {
 			Logger.getGlobal().log(Level.WARNING, "No more frames to read!");
+			bitstream.close();
+			bitstream = null;
+			Logger.getGlobal().log(Level.WARNING, "mp3 stream has closed!");
 			return null;
 		}
+		output = (SampleBuffer) decoder.decodeFrame(h, bitstream);
+		bitstream.closeFrame();
 		// sample buffer set when decoder constructed
 		return output;
 
-	}
-
-	public static void writeAudioSamples(SampleBuffer ouput, SourceDataLine line) {
-		samples = sound.toByteArray(output.getBuffer(), 0,
-				output.getBufferLength());
-		line.write(samples, 0, output.getBufferLength() * 2);
 	}
 
 	/**

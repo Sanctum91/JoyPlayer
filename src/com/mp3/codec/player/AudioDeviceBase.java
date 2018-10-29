@@ -18,10 +18,10 @@
  *----------------------------------------------------------------------
  */
 
-package com.codec.player;
+package com.mp3.codec.player;
 
-import com.mp3.decoder.Decoder;
-import com.mp3.decoder.JavaLayerException;
+import com.mp3.codec.decoder.Decoder;
+import com.mp3.codec.decoder.JavaLayerException;
 
 /**
  * The <code>AudioDeviceBase</code> class provides a simple thread-safe

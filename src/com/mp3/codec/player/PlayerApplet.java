@@ -18,7 +18,7 @@
  *----------------------------------------------------------------------
  */
 
-package com.codec.player;
+package com.mp3.codec.player;
 
 import java.applet.Applet;
 import java.io.IOException;
@@ -27,7 +27,7 @@ import java.net.URL;
 
 import javax.sound.sampled.LineUnavailableException;
 
-import com.mp3.decoder.JavaLayerException;
+import com.mp3.codec.decoder.JavaLayerException;
 
 /**
  * A simple applet that plays an MPEG audio file. The URL (relative to the

@@ -304,14 +304,8 @@ public final class FileExplorer {
 						Float fnext = differ * 0.5f + f;
 						String str = strValues.get(fKeys.indexOf(f));
 						int idx = (int) ((str.length() - 1) * 0.5);
-						if (str.contains(" ")) {
-							while (idx > 0) {
-								if (str.charAt(idx) != ' ') {
-									idx--;
-								} else {
-									break;
-								}
-							}
+						while (str.charAt(idx) != ' ' && idx < str.length() - 5) {
+							idx++;
 						}
 						lyrics.put(f, str.substring(0, idx));
 						if (fontMetrics.stringWidth(str.substring(0, idx)) > 470) {
