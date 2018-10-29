@@ -1,6 +1,6 @@
 Manifest-Version: 1.0
 Created-By: 1.7.0_06 (JoySanctuary)
-Main-Class: com.audioplayer.UIlayout.GUISynthesiszer
-Name: com/audioplayer/UIlayout
+Main-Class: com.audioplayer.GraphAndSound.GUISynthesiszer
+Name: com/audioplayer/GraphAndSound
 Sealed: true
 

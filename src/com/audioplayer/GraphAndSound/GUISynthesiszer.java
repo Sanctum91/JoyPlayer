@@ -31,10 +31,7 @@ import java.awt.event.MouseListener;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
+import java.util.TreeMap;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -55,9 +52,8 @@ import javax.swing.SwingUtilities;
 import javax.swing.plaf.basic.BasicSliderUI;
 import javax.swing.plaf.metal.MetalSliderUI;
 
-import com.audioplayer.GraphAndSound.Codec.BadFileFormatException;
+import com.audioplayer.GraphAndSound.Decoder.BadFileFormatException;
 import com.filesystem.handlers.FileExplorer;
-import com.flac.decoder.FLACCodec;
 import com.mp3.decoder.JavaLayerException;
 
 public final class GUISynthesiszer extends JFrame implements MouseListener,
@@ -85,9 +81,9 @@ public final class GUISynthesiszer extends JFrame implements MouseListener,
 	 * Create JLabel fields for UI layout.
 	 */
 	private JLabel timeLabel;
-	private JLabel lyricsLabelPre;
-	private JLabel lyricsLabelMid;
-	private JLabel lyricsLabelNext;
+	private static JLabel lyricsLabelPre;
+	private static JLabel lyricsLabelMid;
+	private static JLabel lyricsLabelNext;
 
 	/**
 	 * Create Box field to lay out components in a vertical manner.
@@ -136,7 +132,7 @@ public final class GUISynthesiszer extends JFrame implements MouseListener,
 	/**
 	 * Create Boolean fields for player state indication and control.
 	 */
-	private boolean stillHandlingLyrics = true;
+	private boolean stillParsingLyrics = true;
 	private static boolean isPlaying = false;
 	private boolean askForAChange = false;
 	private boolean filesNotBeenInitialized = true;
@@ -146,7 +142,8 @@ public final class GUISynthesiszer extends JFrame implements MouseListener,
 	/**
 	 * Create double field for signaling a request ranging from 0 to 1.
 	 */
-	private static double request = -0.01;
+	private final static float defaultVal = 3.10f;
+	private static double request = defaultVal;
 
 	/**
 	 * Create SourceDataLine field which decoded audio data would be written to.
@@ -197,11 +194,6 @@ public final class GUISynthesiszer extends JFrame implements MouseListener,
 	private ArrayList<Path> songsHavePlayed;
 
 	/**
-	 * Create GUISynthesiszer field.
-	 */
-	private static GUISynthesiszer synthesiszer = null;
-
-	/**
 	 * Create constant String to represent the initial content of time label.
 	 */
 	private static final String timeLabelInit = " " + '\u264f' + " " + "00:00"
@@ -219,6 +211,21 @@ public final class GUISynthesiszer extends JFrame implements MouseListener,
 	private double sampleRateReciprocal;
 	private double totalSampleReciprocal;
 	private double oneInMillion;
+
+	/**
+	 * Create GUISynthesiszer field.
+	 */
+	private final static GUISynthesiszer synthesiszer = new GUISynthesiszer();
+
+	/**
+	 * Create a constant instance of <code>AudioParser</code> and
+	 * <code>LyricsParsesr</code>.
+	 */
+	private final static AudioParser audioParser = synthesiszer.new AudioParser();
+	private final static LyricsParser lyricsParser = synthesiszer.new LyricsParser();
+	private static Thread audioExecutor;
+	private static Thread lyricsExecutor;
+	private static boolean requestConsumed = false;
 
 	private GUISynthesiszer() {
 		super();
@@ -407,6 +414,11 @@ public final class GUISynthesiszer extends JFrame implements MouseListener,
 		this.setVisible(true);
 	}
 
+	public void executor() {
+		audioExecutor = new Thread(audioParser, "audioParser");
+		lyricsExecutor = new Thread(lyricsParser, "lyricsParser");
+	}
+
 	/**
 	 * Set the corresponding slider position based on the given double value.
 	 * 
@@ -454,14 +466,7 @@ public final class GUISynthesiszer extends JFrame implements MouseListener,
 	 * @return
 	 */
 	public static GUISynthesiszer Initializer() {
-		if (synthesiszer == null) {
-			synthesiszer = new GUISynthesiszer();
-			synthesiszer
-					.setTitle(quotes[(int) (quotes.length * Math.random())]);
-			return synthesiszer;
-		} else {
-			return synthesiszer;
-		}
+		return synthesiszer;
 	}
 
 	public static void main(String[] args) throws IOException {
@@ -522,7 +527,7 @@ public final class GUISynthesiszer extends JFrame implements MouseListener,
 					return;
 				} else {
 					Thread.sleep(50);
-					if (FormatParser.getInstance(songToPlay) == null) {
+					if (FormatParser.getInstance() == null) {
 						askForAChange = true;
 						if (isPlaying) {
 							isPlaying = !isPlaying;
@@ -594,8 +599,6 @@ public final class GUISynthesiszer extends JFrame implements MouseListener,
 								Thread.sleep(300);
 								songToPlay = searchRes.toAbsolutePath();
 								lastPlayed = songToPlay;
-								while (wayPlaying || FLACCodec.waySearching()) {
-								}
 								askForAChange = true;
 								if (!songsHavePlayed.contains(songToPlay))
 									songsHavePlayed.add(songToPlay);
@@ -733,16 +736,10 @@ public final class GUISynthesiszer extends JFrame implements MouseListener,
 				if (stopPlaying) {
 					stopPlaying = !stopPlaying;
 				}
-				while (wayPlaying || FLACCodec.waySearching()) {
-					Thread.sleep(1);
-				}
 				howToPlay();
 				break;
 			case stop:
 				logger.log(Level.INFO, "Stop current audio.");
-				while (wayPlaying || FLACCodec.waySearching()) {
-					Thread.sleep(1);
-				}
 				askForAChange = true;
 				lyricsLabelPre.setText(quotes[0]);
 				lyricsLabelMid.setText(quotes[0]);
@@ -750,7 +747,7 @@ public final class GUISynthesiszer extends JFrame implements MouseListener,
 				synthesiszer.setTitle(quotes[0]);
 				Thread.sleep(10);
 				// reset GUI outlook.
-				FormatParser.closeFile(songToPlay);
+				FormatParser.closeFile();
 				slider.setValue(slider.getMinimum());
 				slider.setEnabled(false);
 				if (stopPlaying) {
@@ -771,17 +768,18 @@ public final class GUISynthesiszer extends JFrame implements MouseListener,
 	private void preConditionHandler() {
 		try {
 			logger.log(Level.INFO, "Preconditioning for switching songs.");
-			while (wayPlaying || FLACCodec.waySearching()) {
-				Thread.sleep(1);
-			}
-			logger.log(Level.INFO, "Signal current running thread to quit.");
 			askForAChange = true;
 			if (stopPlaying) {
 				stopPlaying = !stopPlaying;
 			}
-			Thread.sleep(200);
 			timeLabel.setText(alignment + timeLabelInit);
-			FormatParser.closeFile(songToPlay);
+			if (line != null) {
+				line.drain();
+				line.close();
+				line = null;
+			}
+			Thread.sleep(50);
+			FormatParser.closeFile();
 		} catch (InterruptedException e) {
 			e.printStackTrace();
 		}
@@ -808,12 +806,10 @@ public final class GUISynthesiszer extends JFrame implements MouseListener,
 				requestHandler(stop);
 				return;
 			}
-
 			if (!songsHavePlayed.contains(songToPlay)) {
 				logger.log(Level.INFO, "Add new song path to songsHavePlayed.");
 				songsHavePlayed.add(songToPlay);
 			}
-			Thread.sleep(50);
 			logger.log(Level.INFO, "Reset the boolean state of isPlaying.");
 			if (isPlaying) {
 				isPlaying = !isPlaying;
@@ -821,16 +817,14 @@ public final class GUISynthesiszer extends JFrame implements MouseListener,
 			if (!isPlaying) {
 				isPlaying = !isPlaying;
 				playButton.setIcon(pauseIcon);
-				stillHandlingLyrics = true;
+				stillParsingLyrics = true;
 				logger.log(Level.INFO,
 						"Executing two threads, one for audio, the other lyrics.");
-				ExecutorService executor = Executors.newFixedThreadPool(2);
-				executor.execute(new AudioParser());
-				executor.execute(new LyricsParser());
-				executor.shutdown();
+				executor();
+				audioExecutor.start();
+				lyricsExecutor.start();
 			}
-		} catch (InterruptedException | IOException | BadFileFormatException
-				| JavaLayerException e) {
+		} catch (IOException | BadFileFormatException | JavaLayerException e) {
 			e.printStackTrace();
 		}
 	}
@@ -842,11 +836,10 @@ public final class GUISynthesiszer extends JFrame implements MouseListener,
 	 */
 	private void howToPlay() {
 		try {
-			if (FormatParser.getInstance(songToPlay) == null) {
+			if (FormatParser.getInstance() == null) {
 				askForAChange = true;
 				timeLabel.setText(alignment + timeLabelInit);
-				logger.log(Level.INFO,
-						"Creating an flac streaming for the null instance of FLAC decoder.");
+				logger.log(Level.INFO, "Creating an instance of decoder.");
 				FormatParser.createInstance(songToPlay);
 				logger.log(Level.INFO,
 						"Set current song to play as the most recently played one.");
@@ -856,17 +849,14 @@ public final class GUISynthesiszer extends JFrame implements MouseListener,
 				Thread.sleep(200);
 				if (playOrPause) {
 					logger.log(Level.INFO, "Start playing audio.");
+					executor();
 					if (askForAChange) {
-						stillHandlingLyrics = true;
-						Thread audioThread = new Thread(new AudioParser());
-						audioThread.setDaemon(true);
-						audioThread.start();
+						stillParsingLyrics = true;
+						audioExecutor.start();
 						isPlaying = true;
 					}
 					isPlaying = playOrPause;
-					Thread timeThread = new Thread(new LyricsParser());
-					timeThread.setDaemon(true);
-					timeThread.start();
+					lyricsExecutor.start();
 					playButton.setIcon(pauseIcon);
 				} else {
 					logger.log(Level.INFO, "Pause current audio.");
@@ -879,14 +869,12 @@ public final class GUISynthesiszer extends JFrame implements MouseListener,
 						logger.log(Level.INFO, "Start playing audio.");
 						timeLabel.setText(alignment + timeLabelInit);
 						Thread.sleep(200);
-						stillHandlingLyrics = true;
+						stillParsingLyrics = true;
 						logger.log(Level.INFO,
 								"Executing two threads, one for audio, the other lyrics.");
-						ExecutorService executor = Executors
-								.newFixedThreadPool(2);
-						executor.execute(new AudioParser());
-						executor.execute(new LyricsParser());
-						executor.shutdown();
+						executor();
+						audioExecutor.start();
+						lyricsExecutor.start();
 					}
 					isPlaying = playOrPause;
 					playButton.setIcon(pauseIcon);
@@ -915,17 +903,13 @@ public final class GUISynthesiszer extends JFrame implements MouseListener,
 	protected static void sourceDataLineInitializer(int frequency,
 			int sampleDepth, int channels, Boolean signed, Boolean bigEndian)
 			throws LineUnavailableException {
-		logger.log(Level.INFO, "Initializing flac SourceDataLine.");
+		logger.log(Level.INFO, "Initializing SourceDataLine.");
 		AudioFormat format = new AudioFormat(frequency, sampleDepth, channels,
 				signed, bigEndian);
 		line = (SourceDataLine) AudioSystem.getLine(new DataLine.Info(
 				SourceDataLine.class, format));
 		line.open(format);
 		line.start();
-	}
-
-	public static void enablePlaying() {
-		wayPlaying = true;
 	}
 
 	public static SourceDataLine getSourceDataLine() {
@@ -979,9 +963,14 @@ public final class GUISynthesiszer extends JFrame implements MouseListener,
 		private boolean hasNotReachedEnd = true;
 		private double audioLength;
 
-		public AudioParser() {
+		protected AudioParser() {
+
+		}
+
+		@Override
+		public void run() {
 			logger.log(Level.INFO, "Current song to play is " + songToPlay);
-			if (!FormatParser.isReady(songToPlay)) {
+			if (!FormatParser.isReady()) {
 				logger.log(Level.INFO,
 						"Currently decoder is not ready, thread is quitting.");
 				stopPlaying = true;
@@ -990,35 +979,27 @@ public final class GUISynthesiszer extends JFrame implements MouseListener,
 			}
 			try {
 				clipStartTime = 0;
-				sourceDataLineInitializer(
-						FormatParser.getSampleRateInHz(songToPlay),
-						FormatParser.getBitsPerSample(songToPlay),
-						FormatParser.getNumOfChannels(songToPlay), true, false);
-				audioLength = FormatParser.getAudioLength(songToPlay);
+				sourceDataLineInitializer(FormatParser.getSampleRateInHz(),
+						FormatParser.getBitsPerSample(),
+						FormatParser.getNumOfChannels(), true, false);
+				audioLength = FormatParser.getAudioLength();
 				if (filesNotBeenInitialized) {
 					logger.log(Level.INFO,
 							"Cancel wrong state since the stream has been initialized properly.");
 					filesNotBeenInitialized = !filesNotBeenInitialized;
 				}
 			} catch (IllegalArgumentException ex) {
-				JOptionPane.showMessageDialog(
-						null,
-						"Cannot play \"" + songToPlay.getFileName()
-								+ "\" on your current OS.\nSample rate: "
-								+ FormatParser.getSampleRateInHz(songToPlay)
-								+ ", sample depth: "
-								+ FormatParser.getBitsPerSample(songToPlay)
-								+ ", channels: "
-								+ FormatParser.getNumOfChannels(songToPlay),
+				JOptionPane.showMessageDialog(null, "Cannot play \""
+						+ songToPlay.getFileName()
+						+ "\" on your current OS.\nSample rate: "
+						+ FormatParser.getSampleRateInHz() + ", sample depth: "
+						+ FormatParser.getBitsPerSample() + ", channels: "
+						+ FormatParser.getNumOfChannels(),
 						"Initialization Failed", JOptionPane.ERROR_MESSAGE);
 				filesNotBeenInitialized = true;
 			} catch (LineUnavailableException e) {
 				e.printStackTrace();
 			}
-		}
-
-		@Override
-		public void run() {
 			if (filesNotBeenInitialized) {
 				logger.log(Level.WARNING,
 						"Stream has failed to initialize, thread is quitting.");
@@ -1042,31 +1023,37 @@ public final class GUISynthesiszer extends JFrame implements MouseListener,
 			try {
 				oneInMillion = 1e0 / 1e6;
 				logger.log(Level.INFO,
-						"Prepare some parameters for decoding and playing flac streaming.");
-				sampleRateReciprocal = 1e0 / FormatParser
-						.getSampleRateInHz(songToPlay);
-				totalSampleReciprocal = songToPlay.toString().endsWith(".flac") ? 1e0 / FLACCodec
+						"Prepare some parameters for decoding and playing streaming.");
+				sampleRateReciprocal = 1e0 / FormatParser.getSampleRateInHz();
+				totalSampleReciprocal = songToPlay.toString().endsWith(".flac") ? 1e0 / FormatParser
 						.getInstance().getTotalSamplesInStream() : 0;
-				if (FormatParser.getSampleRateInHz(songToPlay) == 0) {
+				if (FormatParser.getSampleRateInHz() == 0) {
 					logger.log(Level.INFO,
 							"Sampling rate is invalid for streaming, thread is quitting.");
 					return;
 				}
-				if (FormatParser.getSampleRateInHz(songToPlay) > 44100) {
+				if (FormatParser.getSampleRateInHz() > 44100) {
 					Thread.sleep(500);
 				}
 				while (!askForAChange) {
-					while (stillHandlingLyrics) {
+					while (stillParsingLyrics) {
 						Thread.sleep(1);
+						// For reset the index of <code>FileExplorer</code>
 					}
-					if (FormatParser.getInstance(songToPlay) == null) {
+					if (FormatParser.getInstance() == null) {
 						logger.log(Level.INFO,
 								"Streaming instance is null ,thread is quitting.");
 						break;
 					}
 					if (playNextSong) {
+						if (!requestConsumed) {
+							requestConsumed = !requestConsumed;
+						}
 						break;
 					} else if (playPreviousSong) {
+						if (!requestConsumed) {
+							requestConsumed = !requestConsumed;
+						}
 						break;
 					} else if (stopPlaying) {
 						requestHandler(stop);
@@ -1075,16 +1062,16 @@ public final class GUISynthesiszer extends JFrame implements MouseListener,
 						Thread.sleep(1);
 						continue;
 					}
-					hasNotReachedEnd = FormatParser.sampleProcessor(request,
-							songToPlay);
+					hasNotReachedEnd = FormatParser.sampleProcessor(request);
 					currentTimeInMicros = line.getMicrosecondPosition()
 							- clipStartTime;
-					if (FormatParser.getInstance(songToPlay) != null) {
+					if (FormatParser.getInstance() != null) {
 						if (currentTimeInMicros * oneInMillion >= audioLength - 1.10f
 								|| !hasNotReachedEnd) {
 							int time = 1101;
 							while (time > 0) {
 								if (askForAChange) {
+									line.drain();
 									line.close();
 									line = null;
 									return;
@@ -1093,31 +1080,20 @@ public final class GUISynthesiszer extends JFrame implements MouseListener,
 								time -= 1;
 								currentTimeInMicros += 1e3;
 							}
-							Thread.sleep(100);
-							line.close();
-							line = null;
 							playNextSong = true;
-							Thread.sleep(1000);
 							requestHandler(next);
-							break;
+							return;
 						}
-						setSliderPosition(FormatParser
-								.getCurrentPosition(songToPlay));
+						setSliderPosition(FormatParser.getCurrentPosition());
 					}
 				}
-			} catch (IOException ex) {
-				JOptionPane.showMessageDialog(synthesiszer,
-						"The I/O device is not ready!",
-						"I/O Error(s) occurred!", JOptionPane.ERROR_MESSAGE);
-				ex.printStackTrace();
-				requestHandler(stop);
-			} catch (InterruptedException | BadFileFormatException
-					| JavaLayerException e) {
+			} catch (InterruptedException e) {
 				e.printStackTrace();
 			} catch (Exception e) {
 				e.printStackTrace();
 			}
 		}
+
 	}
 
 	/**
@@ -1133,8 +1109,27 @@ public final class GUISynthesiszer extends JFrame implements MouseListener,
 	 * Consume request when request has been processed once.
 	 */
 	public static void consumeRequest() {
-		if (request >= 0) {
-			request = -0.1;
+		if (request < defaultVal) {
+			request = defaultVal;
+			requestConsumed = true;
+		}
+	}
+
+	/**
+	 * Check if request has been consumed.
+	 * 
+	 * @return the state of <code>requestConsumed</code>
+	 */
+	public static Boolean hasRequestConsumed() {
+		return requestConsumed;
+	}
+
+	/**
+	 * Clean the state of <code>requestConsumed</code>
+	 */
+	public static void confirmRequestConsumed() {
+		if (requestConsumed) {
+			requestConsumed = !requestConsumed;
 		}
 	}
 
@@ -1202,7 +1197,7 @@ public final class GUISynthesiszer extends JFrame implements MouseListener,
 			requestHandler(previous);
 		} else if (e.getKeyCode() == 32) {
 			playButton.requestFocusInWindow();
-			if (FormatParser.getInstance(songToPlay) == null) {
+			if (FormatParser.getInstance() == null) {
 				askForAChange = true;
 				if (isPlaying) {
 					isPlaying = !isPlaying;
@@ -1239,6 +1234,33 @@ public final class GUISynthesiszer extends JFrame implements MouseListener,
 	}
 
 	/**
+	 * Set text of <code>lyricsLabelPre</code>
+	 * 
+	 * @param text
+	 */
+	public static void setPrelableText(String text) {
+		lyricsLabelPre.setText(text);
+	}
+
+	/**
+	 * Set text of <code>lyricsLabelMid</code>
+	 * 
+	 * @param text
+	 */
+	public static void setMidlableText(String text) {
+		lyricsLabelMid.setText(text);
+	}
+
+	/**
+	 * Set text of <code>lyricsLabelNext</code>
+	 * 
+	 * @param text
+	 */
+	public static void setNextlableText(String text) {
+		lyricsLabelNext.setText(text);
+	}
+
+	/**
 	 * The LyricsParser mains has two functionalities: 1. to parse the lyrics if
 	 * the given LRC file path exists; 2: Match what lyrics to show on the
 	 * labels based on the current position in audio data of the SourceDataLine
@@ -1248,14 +1270,20 @@ public final class GUISynthesiszer extends JFrame implements MouseListener,
 	 *
 	 */
 	private class LyricsParser implements Runnable {
-		private float pennySec;
-		private HashMap<Float, String> lyricDict;
-		private ArrayList<Float> framePoints;
+		private TreeMap<Float, String> lyricDict = new TreeMap<Float, String>();
+		private Float[] frameKeys;
 		private FontMetrics fMetrics;
 		private int timer;
 		private String LastTimeFrame;
+		private int idx;
 
-		public LyricsParser() {
+		protected LyricsParser() {
+
+		}
+
+		@Override
+		public void run() {
+			lyricDict = null;
 			logger.log(Level.INFO,
 					"Constructing new thread for parsing lyrics.");
 			Path lrcPath = FileExplorer.getLRCFilePath(songToPlay);
@@ -1277,17 +1305,17 @@ public final class GUISynthesiszer extends JFrame implements MouseListener,
 				lyricsLabelNext.setForeground(new Color(0x003366));
 				lyricDict = FileExplorer.lrcParser(lrcPath);
 				// Resort time frames in ascending order.
-				Float[] frameKeys = new Float[lyricDict.keySet().size()];
-				lyricDict.keySet().toArray(frameKeys);
-				Arrays.sort(frameKeys);
-				framePoints = new ArrayList<Float>();
-				for (Float f : frameKeys)
-					framePoints.add(f);
-				framePoints.trimToSize();
+				frameKeys = new Float[lyricDict.size()];
+				try {
+					Thread.sleep(5);
+				} catch (InterruptedException e) {
+					e.printStackTrace();
+				}
+				lyricDict.navigableKeySet().toArray(frameKeys);
 			} else {
 				logger.log(Level.INFO,
 						"Cannot find the lyrics for current song.");
-				stillHandlingLyrics = false;
+				stillParsingLyrics = false;
 				timer = 0;
 				lyricsLabelMid.setForeground(new Color(0x006600));
 				lyricsLabelPre.setForeground(new Color(0x006600));
@@ -1301,16 +1329,12 @@ public final class GUISynthesiszer extends JFrame implements MouseListener,
 						.random())]);
 			}
 			timeLabel.setText(alignment + timeLabelInit);
-		}
-
-		@Override
-		public void run() {
 			slider.setEnabled(true);
 			int unshownLenMid = 0;
 			String midText = null;
 			int lenInPixelsMid = -1;
 			int midIdx = 0;
-			if (framePoints == null) {
+			if (frameKeys == null) {
 				midText = lyricsLabelMid.getText();
 				lenInPixelsMid = fontMetrics.stringWidth(midText);
 				if (lenInPixelsMid > 475) {
@@ -1322,18 +1346,19 @@ public final class GUISynthesiszer extends JFrame implements MouseListener,
 			if (askForAChange) {
 				askForAChange = !askForAChange;
 			}
-			float currentKey = 0.0f;
-			stillHandlingLyrics = false;
+			stillParsingLyrics = false;
+			if (!requestConsumed) {
+				requestConsumed = !requestConsumed;
+			}
 			while (!playNextSong && !playPreviousSong && !stopPlaying
 					&& !askForAChange) {
 				try {
-					if (FormatParser.getInstance(songToPlay) == null) {
+					if (FormatParser.getInstance() == null) {
 						break;
 					}
 					if (getState() != Frame.ICONIFIED) {
-
-						if (framePoints == null) {
-							Thread.sleep(20);
+						if (frameKeys == null) {
+							Thread.sleep(50);
 							if (isPlaying) {
 								timer += 20;
 								if (timer % 200 == 0) {
@@ -1354,118 +1379,18 @@ public final class GUISynthesiszer extends JFrame implements MouseListener,
 								}
 							}
 						} else {
-							if (!framePoints.isEmpty()) {
-								pennySec = (float) (currentTimeInMicros / 1e4 * 0.01);
-								if (pennySec < framePoints.get(0).floatValue()) {
-									if (!songName.equals(" ")) {
-										songName = " ";
-										lyricsLabelPre.setText(songName);
-										lyricsLabelMid.setText(songName);
-										lyricsLabelNext.setText('\u266A'
-												+ " "
-												+ lyricDict.get(framePoints
-														.get(0)) + " "
-												+ '\u266A');
-									}
-								} else if (pennySec == framePoints.get(0)
-										.floatValue()) {
-									currentKey = framePoints.get(0);
-									if (!songName.equals('\u266A' + " "
-											+ lyricDict.get(framePoints.get(0))
-											+ " " + '\u266A')) {
-										songName = '\u266A'
-												+ " "
-												+ lyricDict.get(framePoints
-														.get(0)) + " "
-												+ '\u266A';
-										lyricsLabelPre.setText(" ");
-										lyricsLabelMid.setText(songName);
-										lyricsLabelNext.setText('\u266A'
-												+ " "
-												+ lyricDict.get(framePoints
-														.get(1)) + " "
-												+ '\u266A');
-									}
-								} else if (pennySec < framePoints
-										.get(framePoints.size() - 1)) {
-									For_Loop: for (Float fpoint : framePoints) {
-										if (pennySec < fpoint.floatValue()) {
-											if (!songName
-													.equals('\u266A'
-															+ " "
-															+ lyricDict
-																	.get(framePoints
-																			.get(framePoints
-																					.indexOf(fpoint) - 1))
-															+ " " + '\u266A')
-													|| currentKey != fpoint) {
-												currentKey = fpoint;
-												songName = '\u266A'
-														+ " "
-														+ lyricDict
-																.get(framePoints
-																		.get(framePoints
-																				.indexOf(fpoint) - 1))
-														+ " " + '\u266A';
-												if (framePoints
-														.indexOf(currentKey) < 2) {
-													lyricsLabelPre.setText(" ");
-												} else
-													lyricsLabelPre
-															.setText('\u266A'
-																	+ " "
-																	+ lyricDict
-																			.get(framePoints
-																					.get(framePoints
-																							.indexOf(currentKey) - 2))
-																	+ " "
-																	+ '\u266A');
-												lyricsLabelMid
-														.setText(songName);
-												lyricsLabelNext
-														.setText('\u266A'
-																+ " "
-																+ lyricDict
-																		.get(currentKey)
-																+ " "
-																+ '\u266A');
-											}
-											break For_Loop;
-										}
-									}
-								} else {
-									if (!songName
-											.equals('\u266A'
-													+ " "
-													+ lyricDict.get(framePoints.get(framePoints
-															.size() - 1)) + " "
-													+ '\u266A')
-											|| currentKey >= framePoints
-													.get(framePoints.size() - 1)) {
-										currentKey = 0;
-										songName = '\u266A'
-												+ " "
-												+ lyricDict
-														.get(framePoints
-																.get(framePoints
-																		.size() - 1))
-												+ " " + '\u266A';
-										String pre = '\u266A'
-												+ " "
-												+ lyricDict
-														.get(framePoints
-																.get(framePoints
-																		.size() - 2))
-												+ " " + '\u266A';
-										lyricsLabelPre.setText(pre);
-										lyricsLabelMid.setText(songName);
-										lyricsLabelNext.setText(" ");
-									}
-								}
-								Thread.sleep(13);
+							// Pass by value has significantly avoided
+							// NullPointerException.
+							if (lyricDict == null) {
+								break;
 							}
+							if (hasRequestConsumed()) {
+								confirmRequestConsumed();
+								idx = 0;
+							}
+							FileExplorer.lyricsReader(lyricDict, frameKeys,
+									currentTimeInMicros, songName, idx);
 						}
-						Thread.sleep(2);
 						// without any interruption
 						long min = (long) (currentTimeInMicros / 1e6 / 60);
 						long s = (long) (currentTimeInMicros / 1e6) % 60;
@@ -1502,8 +1427,9 @@ public final class GUISynthesiszer extends JFrame implements MouseListener,
 								}
 							}
 						}
+					} else {
+						Thread.sleep(500);
 					}
-					Thread.sleep(5);
 				} catch (InterruptedException e) {
 					e.printStackTrace();
 				}

@@ -24,9 +24,6 @@ import java.io.InputStream;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-import javax.sound.sampled.AudioFormat;
-import javax.sound.sampled.AudioSystem;
-import javax.sound.sampled.DataLine;
 import javax.sound.sampled.LineUnavailableException;
 import javax.sound.sampled.SourceDataLine;
 
@@ -81,8 +78,6 @@ public class Player {
 	private static long lastPosition = 0;
 
 	private static Header h = null;
-
-	private static SourceDataLine line = null;
 
 	private static byte[] samples = null;
 
@@ -182,13 +177,6 @@ public class Player {
 	}
 
 	/**
-	 * Get SourceDataLine instance
-	 */
-	protected SourceDataLine getSourceDataLine() {
-		return line;
-	}
-
-	/**
 	 * Closes this player. Any audio currently playing is stopped immediately.
 	 */
 	public synchronized void close() {
@@ -234,42 +222,6 @@ public class Player {
 	}
 
 	/**
-	 * Get the current position in audio data of SourceDataLine instance.
-	 * 
-	 * @return
-	 */
-	public static long getCurrentPosition() {
-		lastPosition = 0;
-		if (line != null) {
-			lastPosition = line.getMicrosecondPosition();
-		}
-		return lastPosition;
-	}
-
-	/**
-	 * Close current input stream and SourceDataLine.
-	 * 
-	 * @throws BitstreamException
-	 */
-	public static void closeFile() throws BitstreamException {
-		if (line != null) {
-			line.close();
-			line = null;
-		}
-		if (bitstream != null) {
-			bitstream.close();
-			bitstream = null;
-		}
-		if (line == null && bitstream == null) {
-			Logger.getGlobal().log(Level.INFO,
-					"mp3 streaming has closed successfully.");
-		} else {
-			Logger.getGlobal().log(Level.INFO,
-					"mp3 streaming has failed to close.");
-		}
-	}
-
-	/**
 	 * Decode one single frame header and initialize SourceDataLine if header is
 	 * valid.
 	 * 
@@ -297,18 +249,6 @@ public class Player {
 			bitstream.close();
 			Logger.getGlobal().log(Level.WARNING, "mp3 stream closed!");
 			return false;
-		}
-		if (line == null) {
-			Logger.getGlobal().log(Level.INFO, "Initializing line.");
-			sourceDataLineInitializer(h.frequency(), 16, h.mode() == 3 ? 1 : 2,
-					true, false);
-			if (line != null) {
-				Logger.getGlobal().log(Level.INFO,
-						"Line initialized successfully.");
-			} else {
-				Logger.getGlobal()
-						.log(Level.INFO, "Line failed to initialize.");
-			}
 		}
 		return true;
 	}
@@ -344,12 +284,6 @@ public class Player {
 			output = (SampleBuffer) decoder.decodeFrame(h, bitstream);
 			samples = sound.toByteArray(output.getBuffer(), 0,
 					output.getBufferLength());
-			if (line != null) {
-				line.write(samples, 0, output.getBufferLength() * 2);
-			} else {
-				Logger.getGlobal().log(Level.WARNING,
-						"Line currently unavailable!");
-			}
 
 			bitstream.closeFrame();
 		} catch (BitstreamException ex) {
@@ -406,27 +340,6 @@ public class Player {
 		samples = sound.toByteArray(output.getBuffer(), 0,
 				output.getBufferLength());
 		line.write(samples, 0, output.getBufferLength() * 2);
-	}
-
-	/**
-	 * Initialize current SourceDataLine instance if given parameters are valid.
-	 * 
-	 * @param frequency
-	 * @param sampleDepth
-	 * @param channels
-	 * @param signed
-	 * @param bigEndian
-	 * @throws LineUnavailableException
-	 */
-	protected static void sourceDataLineInitializer(int frequency,
-			int sampleDepth, int channels, Boolean signed, Boolean bigEndian)
-			throws LineUnavailableException {
-		AudioFormat format = new AudioFormat(frequency, sampleDepth, channels,
-				signed, bigEndian);
-		line = (SourceDataLine) AudioSystem.getLine(new DataLine.Info(
-				SourceDataLine.class, format));
-		line.open(format);
-		line.start();
 	}
 
 	public static void closeBitStream() {

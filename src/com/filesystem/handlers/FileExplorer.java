@@ -26,21 +26,24 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.HashMap;
+import java.util.Iterator;
 import java.util.LinkedList;
+import java.util.NavigableSet;
+import java.util.TreeMap;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import javax.swing.JFileChooser;
 import javax.swing.JLabel;
 
+import com.audioplayer.GraphAndSound.FormatExtension;
 import com.audioplayer.GraphAndSound.GUISynthesiszer;
 
 public final class FileExplorer {
 	private static final FileExplorer EXPLORER = new FileExplorer();
-	private static final String flacExt = ".flac";
-	private static final String mp3Ext = ".mp3";
-	private static final String lrcExt = ".lrc";
+	private static float pennySec;
+	private static float currentKey;
+	private static String preText;
 	private Path[] songList;
 	private LinkedList<Path> FLACsongList;
 	private LinkedList<Path> mp3songList;
@@ -119,11 +122,14 @@ public final class FileExplorer {
 				specifiedPath = Paths.get(fileChooser.getSelectedFile()
 						.getAbsolutePath());
 				FileAndDirectory.recursiveDirectoryHandler(specifiedPath,
-						EXPLORER.FLACsongList, EXPLORER.folderList, flacExt);
+						EXPLORER.FLACsongList, EXPLORER.folderList,
+						FormatExtension.FLAC.getExtension());
 				FileAndDirectory.recursiveDirectoryHandler(specifiedPath,
-						EXPLORER.mp3songList, EXPLORER.folderList, mp3Ext);
+						EXPLORER.mp3songList, EXPLORER.folderList,
+						FormatExtension.MP3.getExtension());
 				FileAndDirectory.recursiveDirectoryHandler(specifiedPath,
-						EXPLORER.lyricsList, EXPLORER.folderList, lrcExt);
+						EXPLORER.lyricsList, EXPLORER.folderList,
+						FormatExtension.LRC.getExtension());
 				EXPLORER.FLACsongList.addAll(EXPLORER.mp3songList);
 				EXPLORER.songList = new Path[EXPLORER.FLACsongList.size()];
 				EXPLORER.FLACsongList.toArray(EXPLORER.songList);
@@ -144,14 +150,14 @@ public final class FileExplorer {
 	 * @return a resorted instance of HashMap<Float, String> representing the
 	 *         time frames and the corresponding lyrics in time sequenced order.
 	 */
-	public static HashMap<Float, String> lrcParser(Path lycFilePath) {
+	public static TreeMap<Float, String> lrcParser(Path lycFilePath) {
 		if (EXPLORER.specifiedPath == null) {
 			return null;
 		}
 		Font monospace = new Font("Monospace", Font.TRUETYPE_FONT, 22);
 		JLabel label = new JLabel();
 		FontMetrics fontMetrics = label.getFontMetrics(monospace);
-		HashMap<Float, String> lyrics = new HashMap<Float, String>();
+		TreeMap<Float, String> lyrics = new TreeMap<Float, String>();
 		try {
 			Logger.getGlobal().log(Level.INFO, "Parsing lyric contents.");
 			BufferedReader reader = new BufferedReader(new InputStreamReader(
@@ -159,23 +165,15 @@ public final class FileExplorer {
 			String content = "";
 			while ((content = reader.readLine()) != null) {
 				if (content.length() < 11 || content.charAt(6) != '.') {
-					Logger.getGlobal().log(Level.INFO,
-							"skipped contents: " + content);
 					continue;
 				}
 				if (content.charAt(1) < '0' || content.charAt(1) > '9') {
-					Logger.getGlobal().log(Level.INFO,
-							"skipped contents: " + content);
 					continue;
 				}
 				if (content.charAt(9) != ']') {
 					content = content.substring(0, 9) + content.substring(10);
-					Logger.getGlobal().log(Level.INFO,
-							"Substituted contents: " + content);
 				}
 				if (content.substring(10).equals("//")) {
-					Logger.getGlobal().log(Level.INFO,
-							"skipped contents: " + content);
 					break;
 				}
 				String minString = content.substring(
@@ -285,48 +283,50 @@ public final class FileExplorer {
 			}
 			reader.close();
 			// Resort time frame in ascending order.
-			Float[] keysArray = new Float[lyrics.keySet().size()];
-			lyrics.keySet().toArray(keysArray);
-			Arrays.sort(keysArray);
-			ArrayList<Float> fKeys = new ArrayList<Float>();
-			ArrayList<String> strValues = new ArrayList<String>();
-			for (Float f : keysArray) {
-				fKeys.add(f);
-				strValues.add(lyrics.get(f));
-			}
-			fKeys.trimToSize();
-			for (Float f : fKeys) {
-				if (f != fKeys.get(fKeys.size() - 1)) {
-					// handling display issues.
-					if (fontMetrics
-							.stringWidth(strValues.get(fKeys.indexOf(f))) > 475) {
-						Float differ = fKeys.get(fKeys.indexOf(f) + 1) - f;
-						Float fnext = differ * 0.5f + f;
-						String str = strValues.get(fKeys.indexOf(f));
-						int idx = (int) ((str.length() - 1) * 0.5);
-						while (str.charAt(idx) != ' ' && idx < str.length() - 5) {
-							idx++;
-						}
-						lyrics.put(f, str.substring(0, idx));
-						if (fontMetrics.stringWidth(str.substring(0, idx)) > 470) {
-							int nextHalf = idx + (str.length() - 1 - idx) / 2;
-							while (nextHalf != str.length() - 1) {
-								if (str.charAt(nextHalf) != ' ') {
-									nextHalf++;
-								} else {
-									break;
-								}
+			NavigableSet<Float> frames = lyrics.navigableKeySet();
+			Iterator<Float> iterator = frames.iterator();
+			Float f = -3.0f;
+			Float ne = f + 0.01f;
+			int counter = 0;
+			while (iterator.hasNext()) {
+				counter++;
+				if (f < 0.0f) {
+					f = iterator.next();
+				}
+				// handling display issues.
+				ne = iterator.next();
+				if (fontMetrics.stringWidth(lyrics.get(f)) > 475) {
+					Float differ = ne - f;
+					Float fnext = differ * 0.5f + f;
+					String str = lyrics.get(f);
+					int idx = (int) ((str.length() - 1) * 0.5);
+					while (str.charAt(idx) != ' ' && idx < str.length() - 5) {
+						idx++;
+					}
+					lyrics.put(f, str.substring(0, idx));
+					if (fontMetrics.stringWidth(str.substring(0, idx)) > 470) {
+						int nextHalf = idx + (str.length() - 1 - idx) / 2;
+						Loop: while (nextHalf != str.length() - 1) {
+							if (str.charAt(nextHalf) != ' ') {
+								nextHalf++;
+							} else {
+								break Loop;
 							}
-							lyrics.put(fnext, str.substring(idx + 1, nextHalf));
-							if (nextHalf != str.length() - 1) {
-								fnext = differ * 0.7f + f;
-								lyrics.put(fnext, str.substring(nextHalf + 1));
-							}
-						} else {
-							lyrics.put(fnext, str.substring(idx + 1));
 						}
+						lyrics.put(fnext, str.substring(idx + 1, nextHalf));
+						if (nextHalf != str.length() - 1) {
+							fnext = differ * 0.7f + f;
+							lyrics.put(fnext, str.substring(nextHalf + 1));
+						}
+					} else {
+						lyrics.put(fnext, str.substring(idx + 1));
+					}
+					iterator = frames.iterator();
+					for (int i = 0; i < counter; i++) {
+						iterator.next();
 					}
 				}
+				f = ne;
 			}
 		} catch (IOException e) {
 			e.printStackTrace();
@@ -336,47 +336,139 @@ public final class FileExplorer {
 	}
 
 	/**
+	 * Based on given parameters to read the lyrics map, then synchronize the
+	 * lyrics.
+	 * 
+	 * @param lyricDict
+	 * @param frameKeys
+	 * @param currentTimeInMicros
+	 * @param songName
+	 * @param idx
+	 */
+	public static void lyricsReader(TreeMap<Float, String> lyricDict,
+			Float[] frames, long currentTimeInMicros, String songName, int idx) {
+		try {
+			if (frames.length != 0) {
+				pennySec = (float) (currentTimeInMicros * 0.001 * 0.001);
+				if (pennySec < frames[frames.length - 1].floatValue()
+						&& pennySec > frames[0].floatValue()) {
+					For_Loop: for (; idx < frames.length; idx++) {
+						if (pennySec < frames[idx].floatValue()) {
+							if (!songName
+									.equals(lyricDict.get(frames[idx - 1]))
+									|| currentKey != frames[idx]) {
+								currentKey = frames[idx];
+								songName = lyricDict.get(frames[idx - 1]);
+								if (idx < 2) {
+									GUISynthesiszer.setPrelableText(" ");
+								} else
+									GUISynthesiszer.setPrelableText('\u266A'
+											+ " "
+											+ lyricDict.get(frames[idx - 2])
+											+ " " + '\u266A');
+								GUISynthesiszer.setMidlableText('\u266A' + " "
+										+ songName + " " + '\u266A');
+								GUISynthesiszer.setNextlableText('\u266A' + " "
+										+ lyricDict.get(currentKey) + " "
+										+ '\u266A');
+								Thread.sleep(300);
+							}
+							Thread.sleep(30);
+							break For_Loop;
+						}
+					}
+				} else if (pennySec < frames[0].floatValue()) {
+					idx = 0;
+					if (!songName.equals(" ")) {
+						songName = " ";
+						GUISynthesiszer.setPrelableText(songName);
+						GUISynthesiszer.setMidlableText(songName);
+						GUISynthesiszer.setNextlableText('\u266A' + " "
+								+ lyricDict.get(frames[0]) + " " + '\u266A');
+						Thread.sleep(50);
+					}
+				} else if (pennySec == frames[0].floatValue()) {
+					currentKey = frames[0];
+					if (!songName.equals('\u266A' + " "
+							+ lyricDict.get(frames[0]) + " " + '\u266A')) {
+						songName = '\u266A' + " " + lyricDict.get(frames[0])
+								+ " " + '\u266A';
+						GUISynthesiszer.setPrelableText(" ");
+						GUISynthesiszer.setMidlableText(songName);
+						GUISynthesiszer.setNextlableText('\u266A' + " "
+								+ lyricDict.get(frames[0]) + " " + '\u266A');
+						Thread.sleep(50);
+					}
+				} else {
+					if (!songName.equals('\u266A' + " "
+							+ lyricDict.get(frames[frames.length - 1]) + " "
+							+ '\u266A')
+							|| currentKey >= frames[frames.length - 1]) {
+						currentKey = 0;
+						songName = '\u266A' + " "
+								+ lyricDict.get(frames[frames.length - 1])
+								+ " " + '\u266A';
+						preText = '\u266A' + " "
+								+ lyricDict.get(frames[frames.length - 2])
+								+ " " + '\u266A';
+						GUISynthesiszer.setPrelableText(preText);
+						GUISynthesiszer.setMidlableText(songName);
+						GUISynthesiszer.setNextlableText(" ");
+						Thread.sleep(50);
+					}
+				}
+			}
+			Thread.sleep(5);
+		} catch (InterruptedException e) {
+			e.printStackTrace();
+		}
+	}
+
+	/**
 	 * Search the files based on the given file extension from the local file
 	 * directory and refresh the file paths in the ArrayList of Class Path.
 	 * 
 	 * @param fileExtension
 	 */
-	public static void refreshDirectory(String fileExtension) {
+	public static void refreshDirectory(FormatExtension fileExtension) {
 		if (EXPLORER.specifiedPath == null) {
 			return;
 		}
 		switch (fileExtension) {
-		case flacExt:
+		case FLAC:
 			if (!EXPLORER.FLACsongList.isEmpty())
 				EXPLORER.FLACsongList.clear();
 			if (!EXPLORER.folderList.isEmpty())
 				EXPLORER.folderList.clear();
 			FileAndDirectory.recursiveDirectoryHandler(EXPLORER.specifiedPath,
-					EXPLORER.FLACsongList, EXPLORER.folderList, fileExtension);
+					EXPLORER.FLACsongList, EXPLORER.folderList,
+					fileExtension.getExtension());
 			EXPLORER.FLACsongList.addAll(EXPLORER.mp3songList);
 			EXPLORER.songList = new Path[EXPLORER.FLACsongList.size()];
 			EXPLORER.FLACsongList.toArray(EXPLORER.songList);
 			Arrays.sort(EXPLORER.songList);
 			break;
-		case mp3Ext:
+		case MP3:
 			if (!EXPLORER.mp3songList.isEmpty())
 				EXPLORER.mp3songList.clear();
 			if (!EXPLORER.folderList.isEmpty())
 				EXPLORER.folderList.clear();
 			FileAndDirectory.recursiveDirectoryHandler(EXPLORER.specifiedPath,
-					EXPLORER.mp3songList, EXPLORER.folderList, fileExtension);
+					EXPLORER.mp3songList, EXPLORER.folderList,
+					fileExtension.getExtension());
 			EXPLORER.FLACsongList.addAll(EXPLORER.mp3songList);
 			EXPLORER.songList = new Path[EXPLORER.FLACsongList.size()];
 			EXPLORER.FLACsongList.toArray(EXPLORER.songList);
 			Arrays.sort(EXPLORER.songList);
 			break;
-		case lrcExt:
+		case LRC:
 			if (!EXPLORER.lyricsList.isEmpty())
 				EXPLORER.lyricsList.clear();
 			if (!EXPLORER.folderList.isEmpty())
 				EXPLORER.folderList.clear();
 			FileAndDirectory.recursiveDirectoryHandler(EXPLORER.specifiedPath,
-					EXPLORER.lyricsList, EXPLORER.folderList, lrcExt);
+					EXPLORER.lyricsList, EXPLORER.folderList,
+					FormatExtension.LRC.getExtension());
 			break;
 		default:
 			break;
@@ -384,9 +476,9 @@ public final class FileExplorer {
 	}
 
 	public static void refreshDirectory() {
-		refreshDirectory(mp3Ext);
-		refreshDirectory(flacExt);
-		refreshDirectory(lrcExt);
+		refreshDirectory(FormatExtension.MP3);
+		refreshDirectory(FormatExtension.FLAC);
+		refreshDirectory(FormatExtension.LRC);
 	}
 
 	/**
@@ -401,17 +493,18 @@ public final class FileExplorer {
 			return null;
 		}
 		if (EXPLORER.lyricsList.isEmpty()) {
-			refreshDirectory(lrcExt);
+			refreshDirectory(FormatExtension.LRC);
 		}
 		String str = null;
-		if (songPath.toString().endsWith(flacExt)) {
+		if (songPath.toString().endsWith(FormatExtension.FLAC.getExtension())) {
 			str = songPath.toString().substring(0,
 					songPath.toString().length() - 5)
-					+ lrcExt;
-		} else if (songPath.toString().endsWith(mp3Ext)) {
+					+ FormatExtension.LRC.getExtension();
+		} else if (songPath.toString().endsWith(
+				FormatExtension.MP3.getExtension())) {
 			str = songPath.toString().substring(0,
 					songPath.toString().length() - 4)
-					+ lrcExt;
+					+ FormatExtension.LRC.getExtension();
 		}
 		Path path = Paths.get(str);
 		if (Files.exists(path)) {
@@ -428,9 +521,9 @@ public final class FileExplorer {
 	 */
 	public static String getSongName(Path songPath) {
 		String name = songPath.getFileName().toString();
-		if (name.endsWith(flacExt)) {
+		if (name.endsWith(FormatExtension.FLAC.getExtension())) {
 			return name.substring(0, name.length() - 5);
-		} else if (name.endsWith(mp3Ext)) {
+		} else if (name.endsWith(FormatExtension.MP3.getExtension())) {
 			return name.substring(0, name.length() - 4);
 		}
 		return "Audio Player";

@@ -17,17 +17,13 @@ package com.audioplayer.GraphAndSound;
 
 import java.io.IOException;
 import java.nio.file.Path;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
 import javax.sound.sampled.LineUnavailableException;
 
-import com.audioplayer.GraphAndSound.Codec.BadFileFormatException;
-import com.codec.player.MP3Codec;
-import com.codec.player.Player;
-import com.flac.decoder.FLACCodec;
+import com.audioplayer.GraphAndSound.Decoder.BadFileFormatException;
+import com.codec.player.MP3Decoder;
+import com.flac.decoder.FLACDecoder;
 import com.mp3.decoder.JavaLayerException;
-import com.mp3.decoder.SampleBuffer;
 
 /**
  * Create an audio parser which is capable of automatically recognize audio
@@ -43,32 +39,26 @@ public final class FormatParser {
 	/**
 	 * Create constant String fields for file extensions.
 	 */
-	private static Logger logger = Logger.getLogger(GUISynthesiszer.class
-			.getName());
-	private static Codec codec = null;
+	private static Decoder decoding = Decoder.getInstance();
 	private static boolean isFLACEncoded;
 	private static boolean isMP3Encoded;
-	private final static String flacExt = ".flac";
-	private final static String mp3Ext = ".mp3";
-	/**
-	 * Create byte array to store decode audio data.
-	 */
-	private static byte[] sampleInBytes = null;
 
 	/**
 	 * Terminate decoding process.
 	 * 
 	 * @param songToPlay
 	 */
-	public static void closeFile(Path songToPlay) {
-		isFLACEncoded = false;
-		isMP3Encoded = false;
-		if (songToPlay.toString().endsWith(flacExt)) {
-			logger.log(Level.INFO, "Closing FLAC decoder...");
-			FLACCodec.closeFile();
-		} else if (songToPlay.toString().endsWith(mp3Ext)) {
-			logger.log(Level.INFO, "Closing MP3 decoder...");
-			MP3Codec.closeFile();
+	public static void closeFile() {
+		if (isFLACEncoded) {
+			isFLACEncoded = !isFLACEncoded;
+		}
+		if (isMP3Encoded) {
+			isMP3Encoded = !isMP3Encoded;
+		}
+		try {
+			Decoder.close();
+		} catch (IOException e) {
+			e.printStackTrace();
 		}
 	}
 
@@ -81,17 +71,16 @@ public final class FormatParser {
 	 * @throws BadFileFormatException
 	 * @throws JavaLayerException
 	 */
-	public static Codec createInstance(Path songToPlay) throws IOException,
+	public static Decoder createInstance(Path songToPlay) throws IOException,
 			BadFileFormatException, JavaLayerException {
-		if (songToPlay.toString().endsWith(flacExt)) {
-			logger.log(Level.INFO, "Initializing FLAC codec...");
-			return FLACCodec.createInstance(songToPlay);
-		} else if (songToPlay.toString().endsWith(mp3Ext)) {
-			logger.log(Level.INFO, "Initializing MP3 codec...");
-			return MP3Codec.createInstance(songToPlay);
+		try {
+			Thread.sleep(100);
+		} catch (InterruptedException e) {
+			e.printStackTrace();
 		}
-		logger.log(Level.WARNING, "Failed to initialize.");
-		return codec;
+		getLinkedDecoder(songToPlay);
+		decoding = Decoder.getInstance();
+		return decoding;
 	}
 
 	/**
@@ -100,13 +89,9 @@ public final class FormatParser {
 	 * @param songToPlay
 	 * @return
 	 */
-	public static Codec getInstance(Path songToPlay) {
-		if (songToPlay.toString().endsWith(flacExt)) {
-			return FLACCodec.getInstance();
-		} else if (songToPlay.toString().endsWith(mp3Ext)) {
-			return MP3Codec.getInstance();
-		}
-		return codec;
+	public static Decoder getInstance() {
+		decoding = Decoder.getInstance();
+		return decoding;
 	}
 
 	/**
@@ -115,11 +100,11 @@ public final class FormatParser {
 	 * @param songToPlay
 	 * @return
 	 */
-	public static boolean isReady(Path songToPlay) {
-		if (songToPlay.toString().endsWith(flacExt)) {
-			return FLACCodec.isReady();
-		} else if (songToPlay.toString().endsWith(mp3Ext)) {
-			return MP3Codec.isReady();
+	public static boolean isReady() {
+		try {
+			return Decoder.isReady();
+		} catch (InterruptedException e) {
+			e.printStackTrace();
 		}
 		return false;
 	}
@@ -130,13 +115,8 @@ public final class FormatParser {
 	 * @param songToPlay
 	 * @return
 	 */
-	public static int getSampleRateInHz(Path songToPlay) {
-		if (songToPlay.toString().endsWith(flacExt)) {
-			return FLACCodec.getSampleRateInHz();
-		} else if (songToPlay.toString().endsWith(mp3Ext)) {
-			return MP3Codec.getSampleRateInHz();
-		}
-		return -1;
+	public static int getSampleRateInHz() {
+		return decoding.getSampleRateInHz();
 	}
 
 	/**
@@ -145,13 +125,8 @@ public final class FormatParser {
 	 * @param songToPlay
 	 * @return
 	 */
-	public static int getBitsPerSample(Path songToPlay) {
-		if (songToPlay.toString().endsWith(flacExt)) {
-			return FLACCodec.getBitsPerSample();
-		} else if (songToPlay.toString().endsWith(mp3Ext)) {
-			return MP3Codec.getBitsPerSample();
-		}
-		return 0;
+	public static int getBitsPerSample() {
+		return decoding.getBitsPerSample();
 	}
 
 	/**
@@ -160,13 +135,8 @@ public final class FormatParser {
 	 * @param songToPlay
 	 * @return
 	 */
-	public static int getNumOfChannels(Path songToPlay) {
-		if (songToPlay.toString().endsWith(flacExt)) {
-			return FLACCodec.getNumOfChannels();
-		} else if (songToPlay.toString().endsWith(mp3Ext)) {
-			return MP3Codec.getNumOfChannels();
-		}
-		return -1;
+	public static int getNumOfChannels() {
+		return decoding.getNumOfChannels();
 	}
 
 	/**
@@ -175,17 +145,29 @@ public final class FormatParser {
 	 * @param songToPlay
 	 * @return
 	 */
-	public static double getAudioLength(Path songToPlay) {
-		if (songToPlay.toString().endsWith(flacExt)) {
-			return FLACCodec.getInstance().getAudioLength();
-		} else if (songToPlay.toString().endsWith(mp3Ext)) {
-			try {
-				return MP3Codec.getInstance().getAudioLength();
-			} catch (IOException e) {
-				e.printStackTrace();
-			}
+	public static double getAudioLength() {
+		try {
+			return decoding.getAudioLength();
+		} catch (IOException e) {
+			e.printStackTrace();
+			return 0;
 		}
-		return -1;
+	}
+
+	/**
+	 * Get the linked decoder based on the file extension of given file path.
+	 * 
+	 * @param songToPlay
+	 * @return file extension in type String
+	 */
+	public static void getLinkedDecoder(Path filePath) {
+		int idx = filePath.toString().lastIndexOf('.');
+		final String extension = filePath.toString().substring(idx);
+		if (extension.equals(FormatExtension.FLAC.getExtension())) {
+			FLACDecoder.createInstance(filePath);
+		} else if (extension.equals(FormatExtension.MP3.getExtension())) {
+			MP3Decoder.createInstance(filePath);
+		}
 	}
 
 	/**
@@ -194,198 +176,31 @@ public final class FormatParser {
 	 * the SourceDataLine.
 	 * 
 	 * @param request
-	 * @param songToPlay
-	 * @return An indicator showing false if the stream has reached the end,
-	 *         true otherwise.
-	 * @throws IOException
-	 * @throws BadFileFormatException
-	 * @throws InterruptedException
-	 * @throws JavaLayerException
-	 * @throws LineUnavailableException
+	 * @return
 	 */
-	public static boolean sampleProcessor(double request, Path songToPlay)
-			throws IOException, BadFileFormatException, InterruptedException,
-			JavaLayerException, LineUnavailableException {
-		if (isFLACEncoded) {
-			long[][] samples = null;
-			if (request >= 0) {
-				long samplePos = Math.round(FLACCodec.getInstance()
-						.getTotalSamplesInStream() * request);
-				while (FLACCodec.waySearching()) {
-					GUISynthesiszer.enablePlaying();
-				}
-				samples = FLACCodec.getInstance().findNextDecodeableBlock(
-						samplePos);
-				GUISynthesiszer.getSourceDataLine().flush();
-				long clipStartTime = GUISynthesiszer.getSourceDataLine()
-						.getMicrosecondPosition()
-						- Math.round(1e6 * samplePos
-								* GUISynthesiszer.getSampleRateReciprocal());
-				GUISynthesiszer.setClipStartTime(clipStartTime);
-				GUISynthesiszer.getSourceDataLine().flush();
-				GUISynthesiszer.consumeRequest();
-				GUISynthesiszer.changeIcon(true);
-			} else {
-				if (FLACCodec.getInstance().getCurrentStream() == null) {
-					logger.log(Level.INFO,
-							"flac input stream is null, thread is quitting.");
-					return false;
-				}
-				while (FLACCodec.waySearching()) {
-					GUISynthesiszer.enablePlaying();
-				}
-				Object[] temp = FLACCodec.readNextBlock(false);
-				if (temp != null) {
-					samples = (long[][]) temp[0];
-				}
-			}
-			if (samples == null)
-				return false;
-			// convert samples to channel-interleaved bytes in
-			// little-endian
-			sampleInBytes = new byte[samples.length * samples[0].length
-					* FLACCodec.getBitsPerSample() / 8];
-			for (int i = 0, k = 0; i < samples[0].length; i++) {
-				for (int ch = 0; ch < samples.length; ch++) {
-					long cache = samples[ch][i];
-					for (int j = 0; j < FLACCodec.getBitsPerSample() / 8; j++, k++)
-						sampleInBytes[k] = (byte) (cache >>> (j << 3));
-				}
-			}
-			GUISynthesiszer.getSourceDataLine().write(sampleInBytes, 0,
-					sampleInBytes.length);
-			return true;
-		} else if (isMP3Encoded) {
-			if (request >= 0) {
-				long clipStartTime = GUISynthesiszer.getSourceDataLine()
-						.getMicrosecondPosition()
-						- Math.round(MP3Codec.getInstance()
-								.readNextDecodebaleFrame(request) * 1e3);
-				GUISynthesiszer.setClipStartTime(clipStartTime);
-				GUISynthesiszer.getSourceDataLine().flush();
-				GUISynthesiszer.consumeRequest();
-				GUISynthesiszer.changeIcon(true);
-			}
-			SampleBuffer output = MP3Codec.getPlayerInstance()
-					.getDecodedSamples();
-			if (output != null) {
-				Player.writeAudioSamples(output,
-						GUISynthesiszer.getSourceDataLine());
-				return true;
-			} else {
-				return false;
-			}
-		} else {
-			if (songToPlay.toString().endsWith(flacExt)) {
-				if (!isFLACEncoded) {
-					isFLACEncoded = !isFLACEncoded;
-				}
-				if (isMP3Encoded) {
-					isMP3Encoded = !isMP3Encoded;
-				}
-				long[][] samples = null;
-				if (request >= 0) {
-					long samplePos = Math.round(FLACCodec.getInstance()
-							.getTotalSamplesInStream() * request);
-					while (FLACCodec.waySearching()) {
-						GUISynthesiszer.enablePlaying();
-					}
-					samples = FLACCodec.getInstance().findNextDecodeableBlock(
-							samplePos);
-					if (FLACCodec.waySearching()) {
-						FLACCodec.disableSearching();
-					}
-					GUISynthesiszer.getSourceDataLine().flush();
-					long clipStartTime = GUISynthesiszer.getSourceDataLine()
-							.getMicrosecondPosition()
-							- Math.round(1e6 * samplePos
-									* GUISynthesiszer.getSampleRateReciprocal());
-					GUISynthesiszer.setClipStartTime(clipStartTime);
-					GUISynthesiszer.getSourceDataLine().flush();
-					GUISynthesiszer.consumeRequest();
-					GUISynthesiszer.changeIcon(true);
-				} else {
-					if (FLACCodec.getInstance().getCurrentStream() == null) {
-						logger.log(Level.INFO,
-								"flac input stream is null, thread is quitting.");
-						return false;
-					}
-					while (FLACCodec.waySearching()) {
-						GUISynthesiszer.enablePlaying();
-					}
-					Object[] temp = FLACCodec.readNextBlock(false);
-					if (temp != null) {
-						samples = (long[][]) temp[0];
-					}
-				}
-				if (samples == null)
-					return false;
-				// convert samples to channel-interleaved bytes in
-				// little-endian
-				byte[] sampleInBytes = new byte[samples.length
-						* samples[0].length * FLACCodec.getBitsPerSample() / 8];
-				for (int i = 0, k = 0; i < samples[0].length; i++) {
-					for (int ch = 0; ch < samples.length; ch++) {
-						long cache = samples[ch][i];
-						for (int j = 0; j < FLACCodec.getBitsPerSample() / 8; j++, k++)
-							sampleInBytes[k] = (byte) (cache >>> (j << 3));
-					}
-				}
-				GUISynthesiszer.getSourceDataLine().write(sampleInBytes, 0,
-						sampleInBytes.length);
-				return true;
-			} else if (isMP3Encoded || songToPlay.toString().endsWith(mp3Ext)) {
-				if (isFLACEncoded) {
-					isFLACEncoded = !isFLACEncoded;
-				}
-				if (!isMP3Encoded) {
-					isMP3Encoded = !isMP3Encoded;
-				}
-				if (request >= 0) {
-					long clipStartTime = GUISynthesiszer.getSourceDataLine()
-							.getMicrosecondPosition()
-							- Math.round(MP3Codec.getInstance()
-									.readNextDecodebaleFrame(request) * 1e3);
-					GUISynthesiszer.setClipStartTime(clipStartTime);
-					GUISynthesiszer.getSourceDataLine().flush();
-					GUISynthesiszer.consumeRequest();
-					GUISynthesiszer.changeIcon(true);
-				}
-				Player.writeAudioSamples(MP3Codec.getPlayerInstance()
-						.getDecodedSamples(), GUISynthesiszer
-						.getSourceDataLine());
-			}
+	public static boolean sampleProcessor(double request) {
+		try {
+			return decoding.sampleProcessor(request);
+		} catch (IOException | BadFileFormatException
+				| LineUnavailableException | InterruptedException
+				| JavaLayerException e) {
+			e.printStackTrace();
+			return false;
 		}
-		return true;
 	}
 
 	/**
 	 * Calculate current slider position in respect to maximum audio length.
 	 * 
-	 * @param songToPlay
 	 * @return
-	 * @throws IOException
 	 */
-	public static double getCurrentPosition(Path songToPlay) throws IOException {
-		if (isFLACEncoded) {
-			return GUISynthesiszer.getCurrentTimeInMicros()
-					* GUISynthesiszer.getOneInMillion()
-					* FormatParser.getSampleRateInHz(songToPlay)
-					* GUISynthesiszer.getTotalSampleReciprocal();
-		} else if (isMP3Encoded) {
-			return (double) (GUISynthesiszer.getCurrentTimeInMicros() * 1e0 / (MP3Codec
-					.getInstance().getAudioLength() * 1e3));
-		} else {
-			if (songToPlay.toString().endsWith(flacExt)) {
-				return GUISynthesiszer.getCurrentTimeInMicros()
-						* GUISynthesiszer.getOneInMillion()
-						* FormatParser.getSampleRateInHz(songToPlay)
-						* GUISynthesiszer.getTotalSampleReciprocal();
-			} else if (songToPlay.toString().endsWith(mp3Ext)) {
-				return (double) (GUISynthesiszer.getCurrentTimeInMicros() * 1e0 / (MP3Codec
-						.getInstance().getAudioLength() * 1e3));
-			}
+	public static double getCurrentPosition() {
+		try {
+			return decoding.getCurrentPosition();
+		} catch (IOException e) {
+			e.printStackTrace();
 		}
-		return -1;
+		return 0;
 	}
+
 }
