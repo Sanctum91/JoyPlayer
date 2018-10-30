@@ -31,6 +31,7 @@ import java.awt.event.MouseListener;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.TreeMap;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -472,6 +473,7 @@ public final class GUISynthesiszer extends JFrame implements MouseListener,
 	public static void main(String[] args) throws IOException {
 		// logger.setLevel(Level.OFF);
 		Initializer();
+		Arrays.sort(new byte[]{1,34,5});
 	}
 
 	/**
@@ -1313,6 +1315,7 @@ public final class GUISynthesiszer extends JFrame implements MouseListener,
 				}
 				lyricDict.navigableKeySet().toArray(frameKeys);
 			} else {
+				frameKeys = null;
 				logger.log(Level.INFO,
 						"Cannot find the lyrics for current song.");
 				stillParsingLyrics = false;
@@ -1334,14 +1337,12 @@ public final class GUISynthesiszer extends JFrame implements MouseListener,
 			String midText = null;
 			int lenInPixelsMid = -1;
 			int midIdx = 0;
-			if (frameKeys == null) {
-				midText = lyricsLabelMid.getText();
-				lenInPixelsMid = fontMetrics.stringWidth(midText);
-				if (lenInPixelsMid > 475) {
-					unshownLenMid = 1;
-					midText += " ";
-					midText += midText;
-				}
+			midText = lyricsLabelMid.getText();
+			lenInPixelsMid = fontMetrics.stringWidth(midText);
+			if (lenInPixelsMid > 475) {
+				unshownLenMid = 1;
+				midText += " ";
+				midText += midText;
 			}
 			if (askForAChange) {
 				askForAChange = !askForAChange;
